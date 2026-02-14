@@ -1,0 +1,24 @@
+There is a post titled "How to post a newsletter" in this wordpress install.  
+It has instructions on taking a newsletter email message and using it to create
+a newsletter post on the site.
+
+Those instructions include instructions to paste the raw email source to ProofJump
+to extract the html source for the email message.  The plugin should extract
+the html source without posting it to an external tool.
+
+The plugin should monitor an email account for messages that should be posted.
+The plugin should have an admin interface for specifying the email account to modify
+an the information necessary to connect to that account.  (passwords should be properly secured)
+The plugin will set up a process to run in the background at an interval configured through the
+admin interface for the plugin.  That process should check for qualified messages in the inbox.
+
+qualified email messages are those forwarded from mike@cargal.net (this will change later)
+
+qualified messages should run through the process created from the instructions in the "how to post a newsletter" post
+and create the resulting post in a draft status and email the webmaster that the newsletter
+post has been created and available for review.  
+
+AFter enough testing I will want the process to create the post and publish it, so create an option to
+specify the post status that should be used when creating these posts.
+
+
