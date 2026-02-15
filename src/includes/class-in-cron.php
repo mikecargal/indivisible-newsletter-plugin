@@ -1,6 +1,12 @@
 <?php
 /**
  * WP-Cron scheduling for Indivisible Newsletter Poster.
+ *
+ * Relies on WP-Cron being triggered reliably. For low-traffic sites,
+ * configure a system cron job to hit wp-cron.php on schedule.
+ * DreamHost: Create a cron job in the panel with:
+ *   wget -q -O - https://your-site.com/wp-cron.php?doing_wp_cron
+ * And add to wp-config.php: define('DISABLE_WP_CRON', true);
  */
 
 if (!defined('ABSPATH')) {

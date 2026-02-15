@@ -75,23 +75,44 @@ function indivisible_newsletter_fetch_emails() {
         return $select;
     }
 
-    // Search for unseen messages from the qualified sender.
-    $sender = $settings['qualified_sender'];
-    $search_result = indivisible_newsletter_imap_command($conn, 'SEARCH UNSEEN FROM "' . $sender . '"');
-
-    if (is_wp_error($search_result)) {
-        indivisible_newsletter_imap_command($conn, 'LOGOUT');
-        fclose($conn);
-        return array();
+    // Search for messages. If filter_by_sender is enabled, search from each qualified sender.
+    // We use the processed message IDs list (not UNSEEN flag) to avoid duplicates,
+    // since messages may already be read in the mail client.
+    $senders = array();
+    if (!empty($settings['filter_by_sender']) && !empty($settings['qualified_senders'])) {
+        $senders = array_filter(array_map('trim', explode("\n", $settings['qualified_senders'])));
     }
 
-    // Parse UIDs from search response.
     $uids = array();
-    foreach ($search_result as $line) {
-        if (preg_match('/^\*\s+SEARCH\s+([\d\s]+)/i', $line, $m)) {
-            $uids = array_map('intval', preg_split('/\s+/', trim($m[1])));
+    if (!empty($senders)) {
+        // Run a separate SEARCH for each sender and merge results.
+        foreach ($senders as $sender) {
+            $search_result = indivisible_newsletter_imap_command($conn, 'SEARCH FROM "' . $sender . '"');
+            if (!is_wp_error($search_result)) {
+                foreach ($search_result as $line) {
+                    if (preg_match('/^\*\s+SEARCH\s+([\d\s]+)/i', $line, $m)) {
+                        $uids = array_merge($uids, array_map('intval', preg_split('/\s+/', trim($m[1]))));
+                    }
+                }
+            }
+        }
+        $uids = array_unique($uids);
+        sort($uids);
+    } else {
+        $search_result = indivisible_newsletter_imap_command($conn, 'SEARCH ALL');
+        if (is_wp_error($search_result)) {
+            indivisible_newsletter_imap_command($conn, 'LOGOUT');
+            fclose($conn);
+            return array();
+        }
+        foreach ($search_result as $line) {
+            if (preg_match('/^\*\s+SEARCH\s+([\d\s]+)/i', $line, $m)) {
+                $uids = array_map('intval', preg_split('/\s+/', trim($m[1])));
+            }
         }
     }
+
+    error_log('Newsletter Poster: Search returned ' . count($uids) . ' message(s): ' . implode(', ', $uids));
 
     if (empty($uids)) {
         indivisible_newsletter_imap_command($conn, 'LOGOUT');
@@ -100,20 +121,29 @@ function indivisible_newsletter_fetch_emails() {
     }
 
     $processed_ids = get_option(IN_PROCESSED_KEY, array());
+    error_log('Newsletter Poster: ' . count($processed_ids) . ' previously processed ID(s)');
     $emails = array();
 
     foreach ($uids as $uid) {
+        error_log('Newsletter Poster: Processing message #' . $uid);
+
         // Fetch headers.
         $header_data = indivisible_newsletter_imap_fetch_section($conn, $uid, 'HEADER');
         if (empty($header_data)) {
+            error_log('Newsletter Poster: Message #' . $uid . ' - header fetch returned empty');
             continue;
         }
+        error_log('Newsletter Poster: Message #' . $uid . ' - headers fetched (' . strlen($header_data) . ' bytes)');
 
         $headers    = indivisible_newsletter_parse_headers($header_data);
         $message_id = $headers['message-id'] ?? '';
 
+        error_log('Newsletter Poster: Message #' . $uid . ' - Message-ID: ' . $message_id);
+        error_log('Newsletter Poster: Message #' . $uid . ' - Subject: ' . ($headers['subject'] ?? '(none)'));
+
         // Skip already-processed messages.
         if (!empty($message_id) && in_array($message_id, $processed_ids, true)) {
+            error_log('Newsletter Poster: Message #' . $uid . ' - SKIPPED (already processed)');
             continue;
         }
 
@@ -122,10 +152,19 @@ function indivisible_newsletter_fetch_emails() {
         $subject = indivisible_newsletter_decode_mime_header($subject);
 
         // Fetch the full message body to extract HTML.
+        error_log('Newsletter Poster: Message #' . $uid . ' - fetching full body...');
         $body_data = indivisible_newsletter_imap_fetch_section($conn, $uid, '');
+        error_log('Newsletter Poster: Message #' . $uid . ' - body fetched (' . strlen($body_data) . ' bytes)');
+
         $html = '';
         if (!empty($body_data)) {
+            // Write body to temp file for debugging MIME structure.
+            file_put_contents('/tmp/newsletter_debug_msg_' . $uid . '.txt', $body_data);
+            error_log('Newsletter Poster: Message #' . $uid . ' - body saved to /tmp/newsletter_debug_msg_' . $uid . '.txt');
             $html = indivisible_newsletter_extract_html_from_raw($body_data);
+            error_log('Newsletter Poster: Message #' . $uid . ' - HTML extracted (' . strlen($html) . ' bytes)');
+        } else {
+            error_log('Newsletter Poster: Message #' . $uid . ' - body fetch returned empty');
         }
 
         if (!empty($html)) {
@@ -136,6 +175,9 @@ function indivisible_newsletter_fetch_emails() {
                 'date'       => $headers['date'] ?? '',
                 'uid'        => $uid,
             );
+            error_log('Newsletter Poster: Message #' . $uid . ' - QUEUED for post creation');
+        } else {
+            error_log('Newsletter Poster: Message #' . $uid . ' - SKIPPED (no HTML content found)');
         }
 
         // Mark as read.
@@ -343,9 +385,12 @@ function indivisible_newsletter_extract_html_from_raw($raw_message) {
     $headers = $parts[0];
     $body    = $parts[1];
 
-    // Get content type.
+    // Unfold continuation headers (lines starting with whitespace are continuations).
+    $headers = preg_replace('/\r?\n[ \t]+/', ' ', $headers);
+
+    // Get content type (now on a single line after unfolding).
     $content_type = '';
-    if (preg_match('/^Content-Type:\s*(.+?)(?:\r?\n(?!\s)|\r?\n$)/ims', $headers, $m)) {
+    if (preg_match('/^Content-Type:\s*(.+)$/im', $headers, $m)) {
         $content_type = trim($m[1]);
     }
 
@@ -398,9 +443,12 @@ function indivisible_newsletter_find_html_in_multipart($body, $boundary) {
         // Remove trailing boundary markers.
         $part_body = preg_replace('/\r?\n--' . preg_quote($boundary, '/') . '--?\s*$/', '', $part_body);
 
+        // Unfold continuation headers.
+        $part_headers = preg_replace('/\r?\n[ \t]+/', ' ', $part_headers);
+
         // Get content type of this part.
         $part_ct = '';
-        if (preg_match('/^Content-Type:\s*(.+?)(?:\r?\n(?!\s)|\r?\n$)/ims', $part_headers, $m)) {
+        if (preg_match('/^Content-Type:\s*(.+)$/im', $part_headers, $m)) {
             $part_ct = trim($m[1]);
         }
 
@@ -466,6 +514,172 @@ function indivisible_newsletter_parse_headers($header_text) {
     }
 
     return $headers;
+}
+
+/**
+ * Run diagnostics on the IMAP connection and search.
+ *
+ * Returns a detailed report of what the IMAP server returns at each step.
+ *
+ * @return string Diagnostic report.
+ */
+function indivisible_newsletter_diagnose() {
+    $settings = indivisible_newsletter_get_settings();
+    $report = array();
+
+    $report[] = '=== Newsletter Poster Diagnostics ===';
+    $report[] = 'Host: ' . $settings['imap_host'] . ':' . $settings['imap_port'] . ' (' . $settings['imap_encryption'] . ')';
+    $report[] = 'Username: ' . $settings['email_username'];
+    $report[] = 'Folder: ' . $settings['imap_folder'];
+    if (!empty($settings['filter_by_sender']) && !empty($settings['qualified_senders'])) {
+        $senders_list = array_filter(array_map('trim', explode("\n", $settings['qualified_senders'])));
+        $report[] = 'Filter by Sender: Enabled (' . implode(', ', $senders_list) . ')';
+    } else {
+        $report[] = 'Filter by Sender: Disabled (all emails processed)';
+    }
+    $report[] = '';
+
+    if (empty($settings['imap_host']) || empty($settings['email_username']) || empty($settings['email_password'])) {
+        $report[] = 'ERROR: Missing required settings.';
+        return implode("\n", $report);
+    }
+
+    $password = indivisible_newsletter_decrypt($settings['email_password']);
+    $report[] = 'Password decrypted: ' . (empty($password) ? 'EMPTY (decryption may have failed)' : 'OK (' . strlen($password) . ' chars)');
+    $report[] = '';
+
+    // Connect.
+    $report[] = '--- Connecting ---';
+    $conn = indivisible_newsletter_imap_connect($settings, $password);
+    if (is_wp_error($conn)) {
+        $report[] = 'Connection FAILED: ' . $conn->get_error_message();
+        return implode("\n", $report);
+    }
+    $report[] = 'Connected and authenticated successfully.';
+    $report[] = '';
+
+    // Select mailbox.
+    $report[] = '--- Selecting mailbox: ' . $settings['imap_folder'] . ' ---';
+    $select = indivisible_newsletter_imap_command($conn, 'SELECT "' . $settings['imap_folder'] . '"');
+    if (is_wp_error($select)) {
+        $report[] = 'SELECT FAILED: ' . $select->get_error_message();
+        fclose($conn);
+        return implode("\n", $report);
+    }
+    foreach ($select as $line) {
+        $report[] = '  ' . trim($line);
+    }
+    $report[] = '';
+
+    // Search UNSEEN, optionally filtered by sender(s).
+    $diag_senders = array();
+    if (!empty($settings['filter_by_sender']) && !empty($settings['qualified_senders'])) {
+        $diag_senders = array_filter(array_map('trim', explode("\n", $settings['qualified_senders'])));
+    }
+    if (!empty($diag_senders)) {
+        foreach ($diag_senders as $sender) {
+            $report[] = '--- Searching: UNSEEN FROM "' . $sender . '" ---';
+            $search_result = indivisible_newsletter_imap_command($conn, 'SEARCH UNSEEN FROM "' . $sender . '"');
+            if (is_wp_error($search_result)) {
+                $report[] = 'SEARCH FAILED: ' . $search_result->get_error_message();
+            } else {
+                foreach ($search_result as $line) {
+                    $report[] = '  ' . trim($line);
+                }
+            }
+        }
+    } else {
+        $report[] = '--- Searching: UNSEEN (sender filter disabled) ---';
+        $search_result = indivisible_newsletter_imap_command($conn, 'SEARCH UNSEEN');
+        if (is_wp_error($search_result)) {
+            $report[] = 'SEARCH FAILED: ' . $search_result->get_error_message();
+        } else {
+            foreach ($search_result as $line) {
+                $report[] = '  ' . trim($line);
+            }
+        }
+    }
+    $report[] = '';
+
+    // Also try just UNSEEN to see what's there.
+    $report[] = '--- Searching: UNSEEN (all unseen) ---';
+    $unseen_result = indivisible_newsletter_imap_command($conn, 'SEARCH UNSEEN');
+    if (is_wp_error($unseen_result)) {
+        $report[] = 'SEARCH FAILED: ' . $unseen_result->get_error_message();
+    } else {
+        foreach ($unseen_result as $line) {
+            $report[] = '  ' . trim($line);
+        }
+    }
+    $report[] = '';
+
+    // Also try just FROM sender (including read messages).
+    $report[] = '--- Searching: FROM "' . $sender . '" (including read) ---';
+    $from_result = indivisible_newsletter_imap_command($conn, 'SEARCH FROM "' . $sender . '"');
+    if (is_wp_error($from_result)) {
+        $report[] = 'SEARCH FAILED: ' . $from_result->get_error_message();
+    } else {
+        foreach ($from_result as $line) {
+            $report[] = '  ' . trim($line);
+        }
+    }
+    $report[] = '';
+
+    // Search ALL to see total.
+    $report[] = '--- Searching: ALL ---';
+    $all_result = indivisible_newsletter_imap_command($conn, 'SEARCH ALL');
+    if (is_wp_error($all_result)) {
+        $report[] = 'SEARCH FAILED: ' . $all_result->get_error_message();
+    } else {
+        $all_uids = array();
+        foreach ($all_result as $line) {
+            if (preg_match('/^\*\s+SEARCH\s+([\d\s]+)/i', $line, $m)) {
+                $all_uids = array_map('intval', preg_split('/\s+/', trim($m[1])));
+            }
+        }
+        $report[] = '  Total messages: ' . count($all_uids);
+    }
+    $report[] = '';
+
+    // Show headers of recent messages (last 3).
+    $report[] = '--- Recent message headers (last 3) ---';
+    if (!empty($all_uids)) {
+        $recent = array_slice($all_uids, -3);
+        foreach ($recent as $uid) {
+            $header_data = indivisible_newsletter_imap_fetch_section($conn, $uid, 'HEADER');
+            if (!empty($header_data)) {
+                $headers = indivisible_newsletter_parse_headers($header_data);
+                $report[] = '  Message #' . $uid . ':';
+                $report[] = '    From: ' . ($headers['from'] ?? '(none)');
+                $report[] = '    Subject: ' . indivisible_newsletter_decode_mime_header($headers['subject'] ?? '(none)');
+                $report[] = '    Date: ' . ($headers['date'] ?? '(none)');
+                // Check flags.
+                $flags_result = indivisible_newsletter_imap_command($conn, 'FETCH ' . $uid . ' (FLAGS)');
+                if (!is_wp_error($flags_result)) {
+                    foreach ($flags_result as $line) {
+                        if (preg_match('/FLAGS\s*\(([^)]*)\)/i', $line, $fm)) {
+                            $report[] = '    Flags: ' . $fm[1];
+                        }
+                    }
+                }
+                $report[] = '';
+            }
+        }
+    }
+
+    // Show processed IDs.
+    $processed_ids = get_option(IN_PROCESSED_KEY, array());
+    $report[] = '--- Processed message IDs (' . count($processed_ids) . ') ---';
+    if (!empty($processed_ids)) {
+        foreach (array_slice($processed_ids, -5) as $id) {
+            $report[] = '  ' . $id;
+        }
+    }
+
+    indivisible_newsletter_imap_command($conn, 'LOGOUT');
+    fclose($conn);
+
+    return implode("\n", $report);
 }
 
 /**

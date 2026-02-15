@@ -62,8 +62,11 @@ function indivisible_newsletter_process_emails() {
 function indivisible_newsletter_create_post_from_email($email) {
     $settings = indivisible_newsletter_get_settings();
 
+    // Extract the original newsletter content (strips forwarding wrapper if present).
+    $html = indivisible_newsletter_extract_forwarded_content($email['html']);
+
     // Clean the HTML.
-    $html = indivisible_newsletter_clean_html($email['html']);
+    $html = indivisible_newsletter_clean_html($html);
 
     // Build the post title from the email subject.
     $title = indivisible_newsletter_clean_subject($email['subject']);
@@ -101,46 +104,96 @@ function indivisible_newsletter_create_post_from_email($email) {
 }
 
 /**
- * Clean newsletter HTML by applying the transformations from the manual process.
+ * Extract the original newsletter content from a forwarded email's HTML.
  *
- * 1. Hide WP admin bar
- * 2. Remove Unsubscribe links
- * 3. Fix background colors to use theme variable
+ * Handles both forwarded messages (strips forwarding wrapper) and direct messages
+ * (returns HTML as-is). Supports Apple Mail forwarding format.
+ *
+ * @param string $html The HTML from the email.
+ * @return string The newsletter HTML content.
+ */
+function indivisible_newsletter_extract_forwarded_content($html) {
+    // Check if this is a forwarded message by looking for Apple Mail's
+    // "Begin forwarded message:" pattern inside a blockquote.
+    if (preg_match('/<blockquote[^>]*type="cite"[^>]*>/i', $html)) {
+        // Apple Mail format: content is inside <blockquote type="cite">.
+        // The forwarding headers (From, Subject, Date, To) are in <div> elements
+        // before the actual newsletter content.
+        // Extract everything inside the blockquote.
+        if (preg_match('/<blockquote[^>]*type="cite"[^>]*>(.*)<\/blockquote>/is', $html, $m)) {
+            $content = $m[1];
+
+            // Remove the "Begin forwarded message:" div.
+            $content = preg_replace('/<div[^>]*>\s*Begin forwarded message:\s*<\/div>/i', '', $content);
+
+            // Remove Apple interchange newlines.
+            $content = preg_replace('/<br[^>]*class="Apple-interchange-newline"[^>]*>/i', '', $content);
+
+            // Remove the forwarding header divs (From:, Subject:, Date:, To:, Reply-To:).
+            // These are <div> elements containing <span><b>From: </b></span> etc.
+            $content = preg_replace(
+                '/<div[^>]*>\s*<span[^>]*>\s*<b>\s*(?:From|Subject|Date|To|Reply-To|Cc|Bcc)\s*:\s*<\/b>\s*<\/span>.*?<\/div>/is',
+                '',
+                $content
+            );
+
+            // Remove any leading <br> tags between headers and content.
+            $content = preg_replace('/^\s*(<br[^>]*>\s*)+/i', '', $content);
+
+            // The remaining content should be the newsletter.
+            // It may be wrapped in a <div>, extract inner content if so.
+            if (preg_match('/^\s*<div[^>]*>(.*)<\/div>\s*$/is', $content, $dm)) {
+                $content = $dm[1];
+            }
+
+            return trim($content);
+        }
+    }
+
+    // Not a forwarded message (or unrecognized format) - return the HTML body as-is.
+    // Strip the outer <html><head>...<body>...</body></html> wrapper if present,
+    // keeping just the body content.
+    if (preg_match('/<body[^>]*>(.*)<\/body>/is', $html, $m)) {
+        return trim($m[1]);
+    }
+
+    return $html;
+}
+
+/**
+ * Clean newsletter HTML for posting.
+ *
+ * 1. Remove Unsubscribe links
+ * 2. Set nl-container background to theme background color
+ * 3. Set text color to black
  *
  * @param string $html Raw newsletter HTML.
  * @return string Cleaned HTML.
  */
 function indivisible_newsletter_clean_html($html) {
-    // 1. Inject admin bar hide CSS.
-    $admin_bar_css = '#wpadminbar {display: none !important;}';
-
-    if (preg_match('/<style[^>]*>/i', $html)) {
-        // Add to existing style tag.
-        $html = preg_replace(
-            '/(<style[^>]*>)/i',
-            '$1' . "\n" . $admin_bar_css . "\n",
-            $html,
-            1
-        );
-    } else {
-        // Create a style tag at the beginning.
-        $html = '<style>' . $admin_bar_css . '</style>' . "\n" . $html;
-    }
-
-    // 2. Remove Unsubscribe links.
-    // Match <a> tags containing "unsubscribe" (case-insensitive).
+    // 1. Remove Unsubscribe links.
     $html = preg_replace(
         '/<a\b[^>]*>(?:[^<]*\b[Uu]nsubscribe\b[^<]*)<\/a>/i',
         '',
         $html
     );
 
-    // 3. Fix background colors to use theme CSS variable.
-    // Replace common background-color declarations with the theme variable.
-    // Target inline styles and CSS declarations with background-color hex/rgb values.
-    $html = preg_replace(
-        '/background-color\s*:\s*(?:#[0-9a-fA-F]{3,8}|rgb[a]?\([^)]+\)|[a-zA-Z]+)\s*;?/i',
-        'background-color: var(--wp--preset--color--background);',
+    // 2. Set nl-container background to theme background color.
+    // The nl-container table has an inline background-color that clashes with the site theme.
+    $html = preg_replace_callback(
+        '/(<table\b[^>]*class="nl-container"[^>]*style="[^"]*?)background-color:\s*[^;"]+;?/i',
+        function ($m) {
+            return $m[1] . 'background-color: var(--wp--preset--color--background);';
+        },
+        $html
+    );
+
+    // 3. Set text color to black on the nl-container.
+    $html = preg_replace_callback(
+        '/(<table\b[^>]*class="nl-container"[^>]*style=")([^"]*")/i',
+        function ($m) {
+            return $m[1] . 'color: #000000; ' . $m[2];
+        },
         $html
     );
 

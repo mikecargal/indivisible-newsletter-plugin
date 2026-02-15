@@ -59,7 +59,8 @@ function indivisible_newsletter_register_settings() {
         'indivisible-newsletter'
     );
 
-    add_settings_field('qualified_sender', 'Qualified Sender Email', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_processing_section', array('field' => 'qualified_sender', 'placeholder' => 'mike@cargal.net', 'description' => 'Only emails forwarded from this address will be processed.'));
+    add_settings_field('filter_by_sender', 'Filter by Sender', 'indivisible_newsletter_field_checkbox', 'indivisible-newsletter', 'in_processing_section', array('field' => 'filter_by_sender', 'label' => 'Only process emails from a specific sender'));
+    add_settings_field('qualified_senders', 'Qualified Sender Emails', 'indivisible_newsletter_field_textarea', 'indivisible-newsletter', 'in_processing_section', array('field' => 'qualified_senders', 'placeholder' => "sender1@example.com\nsender2@example.com", 'description' => 'One email address per line. Only emails from these addresses will be processed (requires Filter by Sender to be enabled).'));
     add_settings_field('check_interval', 'Check Interval', 'indivisible_newsletter_field_select', 'indivisible-newsletter', 'in_processing_section', array('field' => 'check_interval', 'options' => array('five_minutes' => 'Every 5 Minutes', 'fifteen_minutes' => 'Every 15 Minutes', 'thirty_minutes' => 'Every 30 Minutes', 'hourly' => 'Hourly', 'daily' => 'Daily')));
 
     // Post Creation Section.
@@ -90,7 +91,11 @@ function indivisible_newsletter_sanitize_settings($input) {
     $sanitized['imap_encryption'] = in_array($input['imap_encryption'] ?? '', array('ssl', 'tls', 'none'), true) ? $input['imap_encryption'] : $defaults['imap_encryption'];
     $sanitized['email_username']  = sanitize_text_field($input['email_username'] ?? $defaults['email_username']);
     $sanitized['imap_folder']     = sanitize_text_field($input['imap_folder'] ?? $defaults['imap_folder']);
-    $sanitized['qualified_sender'] = sanitize_email($input['qualified_sender'] ?? $defaults['qualified_sender']);
+    $sanitized['filter_by_sender'] = !empty($input['filter_by_sender']);
+    // Sanitize each sender email, one per line.
+    $raw_senders = $input['qualified_senders'] ?? $defaults['qualified_senders'];
+    $lines = array_filter(array_map('trim', explode("\n", $raw_senders)));
+    $sanitized['qualified_senders'] = implode("\n", array_filter(array_map('sanitize_email', $lines)));
     $sanitized['check_interval']  = sanitize_text_field($input['check_interval'] ?? $defaults['check_interval']);
     $sanitized['post_status']     = in_array($input['post_status'] ?? '', array('draft', 'publish'), true) ? $input['post_status'] : $defaults['post_status'];
     $sanitized['post_category']   = absint($input['post_category'] ?? $defaults['post_category']);
@@ -140,6 +145,25 @@ function indivisible_newsletter_decrypt($encrypted) {
 }
 
 // --- Field rendering callbacks ---
+
+function indivisible_newsletter_field_textarea($args) {
+    $settings = indivisible_newsletter_get_settings();
+    $field    = $args['field'];
+    $value    = esc_textarea($settings[$field] ?? '');
+    $placeholder = esc_attr($args['placeholder'] ?? '');
+    echo "<textarea name='" . IN_OPTION_KEY . "[{$field}]' rows='3' cols='40' placeholder='{$placeholder}' class='regular-text'>{$value}</textarea>";
+    if (!empty($args['description'])) {
+        echo '<p class="description">' . esc_html($args['description']) . '</p>';
+    }
+}
+
+function indivisible_newsletter_field_checkbox($args) {
+    $settings = indivisible_newsletter_get_settings();
+    $field    = $args['field'];
+    $checked  = !empty($settings[$field]) ? 'checked' : '';
+    $label    = esc_html($args['label'] ?? '');
+    echo "<label><input type='checkbox' name='" . IN_OPTION_KEY . "[{$field}]' value='1' {$checked} /> {$label}</label>";
+}
 
 function indivisible_newsletter_field_text($args) {
     $settings = indivisible_newsletter_get_settings();
@@ -214,6 +238,12 @@ function indivisible_newsletter_render_settings_page() {
         }
     }
 
+    // Handle "Diagnose" action.
+    $diagnose_output = '';
+    if (isset($_POST['in_diagnose']) && check_admin_referer('in_diagnose_action')) {
+        $diagnose_output = indivisible_newsletter_diagnose();
+    }
+
     ?>
     <div class="wrap">
         <h1>Newsletter Poster Settings</h1>
@@ -236,7 +266,18 @@ function indivisible_newsletter_render_settings_page() {
                 <?php wp_nonce_field('in_check_now_action'); ?>
                 <button type="submit" name="in_check_now" class="button button-primary">Check Now</button>
             </form>
+            <form method="post">
+                <?php wp_nonce_field('in_diagnose_action'); ?>
+                <button type="submit" name="in_diagnose" class="button button-secondary">Diagnose</button>
+            </form>
         </div>
+
+        <?php if (!empty($diagnose_output)) : ?>
+        <div style="margin-top: 15px;">
+            <h3>Diagnostic Report</h3>
+            <pre style="background: #1d2327; color: #b4b9be; padding: 15px; overflow-x: auto; max-height: 600px; overflow-y: auto; font-size: 13px; line-height: 1.5;"><?php echo esc_html($diagnose_output); ?></pre>
+        </div>
+        <?php endif; ?>
 
         <?php
         // Show next scheduled check.
@@ -248,6 +289,23 @@ function indivisible_newsletter_render_settings_page() {
             echo '<p class="description" style="color: #d63638;">No check is currently scheduled. Save settings to schedule.</p>';
         }
         ?>
+
+        <hr />
+        <h2>Reliable Scheduling (Recommended)</h2>
+        <p>WordPress cron only runs when someone visits the site. For low-traffic sites, set up a server cron job to ensure email checks run on schedule.</p>
+        <p>The <strong>Check Interval</strong> setting above controls how often newsletters are checked. The server cron job below simply ensures WordPress's scheduler runs reliably &mdash; set it to run every few minutes so that scheduled events fire on time.</p>
+        <h3>DreamHost Setup</h3>
+        <ol>
+            <li>In the DreamHost panel, go to <strong>Cron Jobs</strong> and add a new job.</li>
+            <li>Set it to run <strong>every 5 minutes</strong> (this just triggers WordPress's scheduler; the Check Interval above controls actual frequency).</li>
+            <li>Set the command to:<br>
+                <code>wget -q -O - <?php echo esc_html(site_url('/wp-cron.php?doing_wp_cron')); ?></code>
+            </li>
+            <li>Add this line to your <code>wp-config.php</code> (before <em>"That's all, stop editing!"</em>):<br>
+                <code>define('DISABLE_WP_CRON', true);</code>
+            </li>
+        </ol>
+        <p class="description">This disables WordPress's visitor-triggered cron and replaces it with a reliable server-side trigger. The Check Interval setting still controls how often newsletters are actually checked.</p>
     </div>
     <?php
 }
