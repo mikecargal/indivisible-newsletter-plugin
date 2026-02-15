@@ -42,6 +42,15 @@ function indivisible_newsletter_deactivate() {
 /**
  * Get default settings.
  */
+function indivisible_newsletter_get_default_category() {
+    $cat = get_category_by_slug('newsletters');
+    if ($cat) {
+        return $cat->term_id;
+    }
+    $cat = get_cat_ID('Newsletters');
+    return $cat > 0 ? $cat : 0;
+}
+
 function indivisible_newsletter_get_defaults() {
     return array(
         'imap_host'       => 'imap.dreamhost.com',
@@ -55,7 +64,7 @@ function indivisible_newsletter_get_defaults() {
         'check_interval'  => 'hourly',
         'post_status'     => 'draft',
         'webmaster_email' => get_option('admin_email'),
-        'post_category'   => 0,
+        'post_category'   => indivisible_newsletter_get_default_category(),
     );
 }
 
@@ -65,5 +74,17 @@ function indivisible_newsletter_get_defaults() {
 function indivisible_newsletter_get_settings() {
     $defaults = indivisible_newsletter_get_defaults();
     $settings = get_option(IN_OPTION_KEY, array());
-    return wp_parse_args($settings, $defaults);
+    $merged   = wp_parse_args($settings, $defaults);
+
+    // Fall back to default if saved value is empty/zero.
+    foreach ($defaults as $key => $default) {
+        if (is_string($default) && $default !== '' && isset($merged[$key]) && $merged[$key] === '') {
+            $merged[$key] = $default;
+        }
+        if (is_int($default) && $default > 0 && isset($merged[$key]) && intval($merged[$key]) === 0) {
+            $merged[$key] = $default;
+        }
+    }
+
+    return $merged;
 }
