@@ -44,10 +44,10 @@ function indivisible_newsletter_deactivate() {
  */
 function indivisible_newsletter_get_defaults() {
     return array(
-        'imap_host'       => '',
+        'imap_host'       => 'imap.dreamhost.com',
         'imap_port'       => '993',
         'imap_encryption' => 'ssl',
-        'email_username'  => '',
+        'email_username'  => 'nlpost@columbusgaindivisible.org',
         'email_password'  => '',
         'imap_folder'     => 'INBOX',
         'filter_by_sender' => false,

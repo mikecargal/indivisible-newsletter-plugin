@@ -42,10 +42,10 @@ function indivisible_newsletter_register_settings() {
         'indivisible-newsletter'
     );
 
-    add_settings_field('imap_host', 'IMAP Host', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_imap_section', array('field' => 'imap_host', 'placeholder' => 'imap.gmail.com'));
+    add_settings_field('imap_host', 'IMAP Host', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_imap_section', array('field' => 'imap_host', 'placeholder' => 'imap.dreamhost.com'));
     add_settings_field('imap_port', 'IMAP Port', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_imap_section', array('field' => 'imap_port', 'type' => 'number'));
     add_settings_field('imap_encryption', 'Encryption', 'indivisible_newsletter_field_select', 'indivisible-newsletter', 'in_imap_section', array('field' => 'imap_encryption', 'options' => array('ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None')));
-    add_settings_field('email_username', 'Email Username', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_imap_section', array('field' => 'email_username', 'placeholder' => 'user@example.com'));
+    add_settings_field('email_username', 'Email Username', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_imap_section', array('field' => 'email_username', 'placeholder' => 'nlpost@columbusgaindivisible.org'));
     add_settings_field('email_password', 'Email Password', 'indivisible_newsletter_field_password', 'indivisible-newsletter', 'in_imap_section', array('field' => 'email_password'));
     add_settings_field('imap_folder', 'Mailbox Folder', 'indivisible_newsletter_field_text', 'indivisible-newsletter', 'in_imap_section', array('field' => 'imap_folder', 'placeholder' => 'INBOX'));
 
