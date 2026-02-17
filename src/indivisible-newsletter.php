@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Indivisible Newsletter Poster
  * Description: Automatically monitors an email inbox and creates WordPress posts from newsletter emails.
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Mike Cargal
  */
 
@@ -25,7 +25,8 @@ require_once IN_PLUGIN_DIR . 'includes/class-in-cron.php';
 
 // Activation hook.
 register_activation_hook(__FILE__, 'indivisible_newsletter_activate');
-function indivisible_newsletter_activate() {
+function indivisible_newsletter_activate()
+{
     $defaults = indivisible_newsletter_get_defaults();
     if (!get_option(IN_OPTION_KEY)) {
         add_option(IN_OPTION_KEY, $defaults);
@@ -35,14 +36,16 @@ function indivisible_newsletter_activate() {
 
 // Deactivation hook.
 register_deactivation_hook(__FILE__, 'indivisible_newsletter_deactivate');
-function indivisible_newsletter_deactivate() {
+function indivisible_newsletter_deactivate()
+{
     indivisible_newsletter_clear_cron();
 }
 
 /**
  * Get default settings.
  */
-function indivisible_newsletter_get_default_category() {
+function indivisible_newsletter_get_default_category()
+{
     $cat = get_category_by_slug('newsletters');
     if ($cat) {
         return $cat->term_id;
@@ -51,30 +54,32 @@ function indivisible_newsletter_get_default_category() {
     return $cat > 0 ? $cat : 0;
 }
 
-function indivisible_newsletter_get_defaults() {
+function indivisible_newsletter_get_defaults()
+{
     return array(
-        'imap_host'       => 'imap.dreamhost.com',
-        'imap_port'       => '993',
+        'imap_host' => 'imap.dreamhost.com',
+        'imap_port' => '993',
         'imap_encryption' => 'ssl',
-        'email_username'  => 'nlpost@columbusgaindivisible.org',
-        'email_password'  => '',
-        'imap_folder'     => 'INBOX',
+        'email_username' => 'nlpost@columbusgaindivisible.org',
+        'email_password' => '',
+        'imap_folder' => 'INBOX',
         'filter_by_sender' => false,
         'qualified_senders' => '',
-        'check_interval'  => 'hourly',
-        'post_status'     => 'draft',
+        'check_interval' => 'hourly',
+        'post_status' => 'draft',
         'webmaster_email' => get_option('admin_email'),
-        'post_category'   => indivisible_newsletter_get_default_category(),
+        'post_category' => indivisible_newsletter_get_default_category(),
     );
 }
 
 /**
  * Get plugin settings merged with defaults.
  */
-function indivisible_newsletter_get_settings() {
+function indivisible_newsletter_get_settings()
+{
     $defaults = indivisible_newsletter_get_defaults();
     $settings = get_option(IN_OPTION_KEY, array());
-    $merged   = wp_parse_args($settings, $defaults);
+    $merged = wp_parse_args($settings, $defaults);
 
     // Fall back to default if saved value is empty/zero.
     foreach ($defaults as $key => $default) {
