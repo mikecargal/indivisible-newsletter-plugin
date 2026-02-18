@@ -1,0 +1,13 @@
+{
+    "name": "mikecargal/indivisible-newsletter",
+    "description": "Indivisible Newsletter Poster - WordPress Plugin",
+    "require-dev": {
+        "phpunit/phpunit": "^9.6",
+        "wp-phpunit/wp-phpunit": "^6.9",
+        "yoast/phpunit-polyfills": "^3.0"
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:verbose": "phpunit --testdox"
+    }
+}

@@ -1,6 +1,10 @@
 # Distribution files
 dist/
 
+# Composer
+vendor/
+composer.lock
+
 # macOS
 .DS_Store
 .AppleDouble

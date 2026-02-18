@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<phpunit
+    bootstrap="tests/bootstrap.php"
+    backupGlobals="false"
+    colors="true"
+>
+    <testsuites>
+        <testsuite name="Indivisible Newsletter">
+            <directory suffix=".php">./tests</directory>
+        </testsuite>
+    </testsuites>
+    <php>
+        <const name="WP_TESTS_CONFIG_FILE_PATH" value="tests/wp-tests-config.php" />
+    </php>
+</phpunit>
