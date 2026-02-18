@@ -21,5 +21,10 @@ function _manually_load_plugin() {
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
+// Define SECURE_AUTH_SALT if not already set (needed for encryption tests).
+if ( ! defined( 'SECURE_AUTH_SALT' ) ) {
+	define( 'SECURE_AUTH_SALT', 'test-salt-for-phpunit-only' );
+}
+
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
