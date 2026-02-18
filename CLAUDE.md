@@ -49,22 +49,47 @@ This copies your changes to the WordPress plugins directory where they can be te
 - Database: MySQL 8.0 via Docker
 - Table prefix: `wp_fx2b2f_`
 
+## Test-Driven Development (TDD) — MANDATORY
+
+All changes to this plugin MUST follow a test-first workflow.
+
+### TDD Workflow
+
+1. **Write unit tests FIRST** — Before writing any implementation code, write PHPUnit tests that define the expected behavior.
+2. **Present tests for approval** — Show the new/modified test files to the user and wait for explicit approval before proceeding to implementation.
+3. **Write implementation code** — Only after tests are approved, write the production code in `src/` to make the tests pass.
+4. **Run tests to verify** — Run tests from the `dev_wordpress_claude` directory: `./run-tests.sh newsletter`
+
+### Test Infrastructure
+
+- Tests live in `tests/` directory
+- Base class: `WP_UnitTestCase`
+- Run: `cd ../dev_wordpress_claude && ./run-tests.sh newsletter`
+- Install deps (inside Docker): `cd /var/www/plugins/indivisible-newsletter-plugin && composer install`
+- `SECURE_AUTH_SALT` is defined in `tests/bootstrap.php` for encryption tests
+
+### Key Rules
+
+- **NEVER write implementation code without writing tests first**
+- **NEVER proceed to implementation without user approval of the tests**
+
 ## Common Development Tasks
 
 ### Add a Feature
-1. Plan the feature considering WordPress integration points
-2. Edit files in `src/`
-3. Run `./quick-deploy.sh` frequently to test during development
-4. Test thoroughly in WordPress environment
-5. Update README.md with new feature documentation
-6. Run `./bundle.sh` to create distribution package
+1. Write tests defining the expected behavior
+2. Present tests for user approval
+3. Edit files in `src/` to implement the feature
+4. Run tests to verify all pass
+5. Run `./quick-deploy.sh` for integration testing
+6. Update README.md with new feature documentation
+7. Run `./bundle.sh` to create distribution package
 
 ### Fix a Bug
-1. Identify the issue in the WordPress environment
-2. Edit the relevant file in `src/`
-3. Run `./quick-deploy.sh` to test the fix
-4. Verify fix works in WordPress
-5. Run `./bundle.sh` when ready to distribute
+1. Write a failing test that reproduces the bug
+2. Present the test for user approval
+3. Edit the relevant file in `src/` to fix the bug
+4. Run `./run-tests.sh newsletter` (from dev_wordpress_claude) to verify
+5. Run `./quick-deploy.sh` for integration testing in WordPress
 
 ### Add JavaScript
 1. Create new JS file in `src/js/`
