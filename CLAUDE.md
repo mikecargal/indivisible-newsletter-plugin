@@ -55,23 +55,28 @@ All changes to this plugin MUST follow a test-first workflow.
 
 ### TDD Workflow
 
-1. **Write unit tests FIRST** — Before writing any implementation code, write PHPUnit tests that define the expected behavior.
+1. **Write unit tests FIRST** — Before writing any implementation code, write tests (PHPUnit for PHP, Jest for JavaScript) that define the expected behavior.
 2. **Present tests for approval** — Show the new/modified test files to the user and wait for explicit approval before proceeding to implementation.
 3. **Write implementation code** — Only after tests are approved, write the production code in `src/` to make the tests pass.
 4. **Run tests to verify** — Run tests from the `dev_wordpress_claude` directory: `./run-tests.sh newsletter`
 
 ### Test Infrastructure
 
-- Tests live in `tests/` directory
+**PHP (PHPUnit):**
+
+- Tests live in `tests/test-*.php`
 - Base class: `WP_UnitTestCase`
 - Run: `cd ../dev_wordpress_claude && ./run-tests.sh newsletter`
 - Install deps (inside Docker): `cd /var/www/plugins/indivisible-newsletter-plugin && composer install`
 - `SECURE_AUTH_SALT` is defined in `tests/bootstrap.php` for encryption tests
 
+**JavaScript (Jest):** This plugin currently has no JavaScript files. If JS is added, set up Jest infrastructure (see login-required-plugin or indivisible-agenda-plugin for examples) and write tests before implementation.
+
 ### Key Rules
 
 - **NEVER write implementation code without writing tests first**
 - **NEVER proceed to implementation without user approval of the tests**
+- If JavaScript is added to this plugin, write Jest tests in `tests/js/*.test.js` before implementation
 
 ## Common Development Tasks
 
