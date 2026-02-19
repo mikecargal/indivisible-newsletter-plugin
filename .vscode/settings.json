@@ -1,16 +1,5 @@
 {
-	"sonarlint.rules": {
-		"php:S4833": {
-			"level": "off"
-		},
-		"php:S100": {
-			"level": "off"
-		},
-		"php:S1172": {
-			"level": "off"
-		}
-	},
-	"cSpell.words": [
-		"dreamhost"
-	]
+	"phpunit.paths": {
+		"/var/www/plugins/indivisible-newsletter-plugin": "${workspaceFolder}"
+	}
 }
