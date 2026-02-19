@@ -5,6 +5,12 @@
 		},
 		"php:S100": {
 			"level": "off"
+		},
+		"php:S1172": {
+			"level": "off"
 		}
-	}
+	},
+	"cSpell.words": [
+		"dreamhost"
+	]
 }
