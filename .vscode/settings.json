@@ -1,5 +1,5 @@
 {
 	"phpunit.paths": {
-		"/var/www/plugins/indivisible-newsletter-plugin": "${workspaceFolder}"
+		"${workspaceFolder}": "/var/www/plugins/indivisible-newsletter-plugin"
 	}
 }
