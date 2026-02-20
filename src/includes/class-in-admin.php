@@ -124,7 +124,7 @@ function indivisible_newsletter_encrypt($plaintext) {
     $key    = hash('sha256', SECURE_AUTH_SALT, true);
     $iv     = openssl_random_pseudo_bytes(16);
     $cipher = openssl_encrypt($plaintext, 'aes-256-cbc', $key, 0, $iv);
-    return base64_encode($iv . '::' . $cipher);
+    return base64_encode($iv . $cipher);
 }
 
 /**
@@ -136,11 +136,12 @@ function indivisible_newsletter_decrypt($encrypted) {
     }
     $key  = hash('sha256', SECURE_AUTH_SALT, true);
     $data = base64_decode($encrypted);
-    $parts = explode('::', $data, 2);
-    if (count($parts) !== 2) {
+    // IV is always exactly 16 bytes; require at least 17 bytes (IV + some cipher).
+    if (strlen($data) < 17) {
         return '';
     }
-    list($iv, $cipher) = $parts;
+    $iv     = substr($data, 0, 16);
+    $cipher = substr($data, 16);
     return openssl_decrypt($cipher, 'aes-256-cbc', $key, 0, $iv);
 }
 

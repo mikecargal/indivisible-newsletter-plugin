@@ -57,8 +57,8 @@ class Test_IN_Encryption extends WP_UnitTestCase {
 	}
 
 	public function test_decrypt_malformed_data_returns_empty() {
-		// No '::' separator.
-		$this->assertEquals( '', indivisible_newsletter_decrypt( base64_encode( 'no-separator' ) ) );
+		// Data too short to contain a 16-byte IV plus any cipher.
+		$this->assertEquals( '', indivisible_newsletter_decrypt( base64_encode( 'too-short' ) ) );
 	}
 
 	public function test_decrypt_invalid_base64_returns_empty() {
