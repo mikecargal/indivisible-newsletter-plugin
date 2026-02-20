@@ -43,3 +43,8 @@ Temporary Items
 
 # Node modules (if npm is used)
 node_modules/
+
+# PHPUnit generated files
+.phpunit.result.cache
+.phpunit.cache/
+coverage/
