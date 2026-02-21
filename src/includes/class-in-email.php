@@ -576,6 +576,10 @@ function indivisible_newsletter_parse_headers($header_text) {
 /**
  * Run per-sender or all-mailbox UNSEEN search and append results to $report.
  *
+ * Admin diagnostic tool; requires a live IMAP connection.
+ *
+ * @codeCoverageIgnore
+ *
  * @param resource $conn         IMAP connection.
  * @param array    $diag_senders Qualified sender addresses, or empty for all.
  * @param array    $report       Report array (passed by reference).
@@ -596,6 +600,10 @@ function indivisible_newsletter_diagnose_sender_searches($conn, array $diag_send
 /**
  * Run one IMAP command and append the response lines (or error) to $report.
  *
+ * Admin diagnostic tool; requires a live IMAP connection.
+ *
+ * @codeCoverageIgnore
+ *
  * @param resource $conn    IMAP connection.
  * @param string   $command IMAP command string (without tag).
  * @param array    $report  Report array (passed by reference).
@@ -613,6 +621,10 @@ function indivisible_newsletter_diagnose_run_search($conn, string $command, arra
 
 /**
  * Append headers and flags for a single message to $report.
+ *
+ * Admin diagnostic tool; requires a live IMAP connection.
+ *
+ * @codeCoverageIgnore
  *
  * @param resource $conn   IMAP connection.
  * @param int      $uid    Message sequence number.
@@ -643,6 +655,10 @@ function indivisible_newsletter_diagnose_show_message($conn, int $uid, array &$r
 /**
  * Append recent-message headers section to $report.
  *
+ * Admin diagnostic tool; requires a live IMAP connection.
+ *
+ * @codeCoverageIgnore
+ *
  * @param resource $conn      IMAP connection.
  * @param array    $all_uids  All message UIDs in the mailbox.
  * @param array    $report    Report array (passed by reference).
@@ -661,6 +677,9 @@ function indivisible_newsletter_diagnose_recent_msgs($conn, array $all_uids, arr
  * Run diagnostics on the IMAP connection and search.
  *
  * Returns a detailed report of what the IMAP server returns at each step.
+ * Admin diagnostic tool; requires a live IMAP connection.
+ *
+ * @codeCoverageIgnore
  *
  * @return string Diagnostic report.
  */
