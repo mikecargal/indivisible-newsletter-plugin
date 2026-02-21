@@ -7,6 +7,9 @@
  */
 class Test_IN_Processor_Extended extends WP_UnitTestCase {
 
+	private const EMAIL_DATE       = '2026-02-17';
+	private const WEBMASTER_EMAIL  = 'admin@example.com';
+
 	private $sent_emails = array();
 
 	public function setUp(): void {
@@ -176,7 +179,7 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		$email = array(
 			'subject'    => 'Fwd: Test Newsletter',
 			'html'       => '<html><body><p>Newsletter body</p></body></html>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-basic-123',
 		);
 
@@ -200,7 +203,7 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		$email = array(
 			'subject'    => 'Newsletter',
 			'html'       => '<p>Content</p>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-gutenberg',
 		);
 
@@ -222,7 +225,7 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		$email = array(
 			'subject'    => 'Newsletter',
 			'html'       => '<p>Protected</p>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-meta',
 		);
 
@@ -240,7 +243,7 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		$email = array(
 			'subject'    => 'Published Newsletter',
 			'html'       => '<p>Content</p>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-publish',
 		);
 
@@ -260,7 +263,7 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		$email = array(
 			'subject'    => 'Categorized Newsletter',
 			'html'       => '<p>Content</p>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-cat',
 		);
 
@@ -277,20 +280,20 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		update_option( IN_OPTION_KEY, array(
 			'post_status'     => 'draft',
 			'post_category'   => 0,
-			'webmaster_email' => 'admin@example.com',
+			'webmaster_email' => self::WEBMASTER_EMAIL,
 		) );
 
 		$email = array(
 			'subject'    => 'Notify Test',
 			'html'       => '<p>Content</p>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-notify',
 		);
 
 		indivisible_newsletter_create_post_from_email( $email );
 
 		$this->assertCount( 1, $this->sent_emails );
-		$this->assertEquals( 'admin@example.com', $this->sent_emails[0]['to'] );
+		$this->assertEquals( self::WEBMASTER_EMAIL, $this->sent_emails[0]['to'] );
 		$this->assertStringContainsString( 'Notify Test', $this->sent_emails[0]['subject'] );
 	}
 
@@ -314,13 +317,13 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		update_option( IN_OPTION_KEY, array(
 			'post_status'     => 'draft',
 			'post_category'   => 0,
-			'webmaster_email' => 'admin@example.com',
+			'webmaster_email' => self::WEBMASTER_EMAIL,
 		) );
 
 		$email = array(
 			'subject'    => 'Details Test',
 			'html'       => '<p>Content</p>',
-			'date'       => '2026-02-17',
+			'date'       => self::EMAIL_DATE,
 			'message_id' => 'test-details',
 		);
 
@@ -355,5 +358,35 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 		$this->assertCount( 500, $trimmed );
 		$this->assertEquals( 'msg-6', $trimmed[0] ); // Oldest kept.
 		$this->assertEquals( 'msg-505', end( $trimmed ) ); // Newest.
+	}
+
+	// --- extract_forwarded_content edge cases ---
+
+	public function test_extract_forwarded_content_removes_cc_header() {
+		$html   = '<blockquote type="cite"><div><span><b>Cc: </b></span>cc@example.com</div><p>Post-Cc content</p></blockquote>';
+		$result = indivisible_newsletter_extract_forwarded_content( $html );
+
+		$this->assertStringContainsString( 'Post-Cc content', $result );
+		$this->assertStringNotContainsString( 'Cc:', $result );
+	}
+
+	public function test_extract_forwarded_content_removes_bcc_header() {
+		$html   = '<blockquote type="cite"><div><span><b>Bcc: </b></span>bcc@example.com</div><p>Post-Bcc content</p></blockquote>';
+		$result = indivisible_newsletter_extract_forwarded_content( $html );
+
+		$this->assertStringContainsString( 'Post-Bcc content', $result );
+		$this->assertStringNotContainsString( 'Bcc:', $result );
+	}
+
+	public function test_extract_forwarded_content_empty_string() {
+		$result = indivisible_newsletter_extract_forwarded_content( '' );
+		$this->assertEquals( '', $result );
+	}
+
+	public function test_extract_forwarded_content_extracts_single_wrapper_div() {
+		$html   = '<blockquote type="cite"><div><span><b>From: </b></span>sender@example.com</div><div><p>Unwrapped content</p></div></blockquote>';
+		$result = indivisible_newsletter_extract_forwarded_content( $html );
+
+		$this->assertEquals( '<p>Unwrapped content</p>', $result );
 	}
 }
