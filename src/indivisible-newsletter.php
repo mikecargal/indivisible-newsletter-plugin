@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Indivisible Newsletter Poster
  * Description: Automatically monitors an email inbox and creates WordPress posts from newsletter emails.
- * Version: 1.0.1
+ * Version: 1.1.0
  * Author: Mike Cargal
  */
 
@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('IN_VERSION', '1.0.0');
+define('IN_VERSION', get_file_data(__FILE__, array('Version' => 'Version'))['Version']);
 define('IN_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('IN_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('IN_OPTION_KEY', 'indivisible_newsletter_settings');
