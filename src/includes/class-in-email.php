@@ -95,7 +95,7 @@ function indivisible_newsletter_imap_search_uids($conn, array $settings): array 
     if (!empty($senders)) {
         // Run a separate SEARCH for each sender and merge results.
         foreach ($senders as $sender) {
-            $result = indivisible_newsletter_imap_command($conn, 'SEARCH FROM "' . $sender . '"');
+            $result = indivisible_newsletter_imap_command($conn, 'SEARCH FROM "' . addcslashes($sender, '"\\') . '"');
             if (!is_wp_error($result)) {
                 $uids = array_merge($uids, indivisible_newsletter_imap_parse_search_uids($result));
             }
@@ -149,8 +149,6 @@ function indivisible_newsletter_fetch_process_message($conn, int $uid, array $pr
 
     $html = '';
     if (!empty($body_data)) {
-        file_put_contents('/tmp/newsletter_debug_msg_' . $uid . '.txt', $body_data);
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - body saved to /tmp/newsletter_debug_msg_' . $uid . '.txt');
         $html = indivisible_newsletter_extract_html_from_raw($body_data);
         error_log(IN_LOG_MSG_PREFIX . $uid . ' - HTML extracted (' . strlen($html) . IN_LOG_BYTES_SUFFIX);
     } else {
@@ -588,7 +586,7 @@ function indivisible_newsletter_diagnose_sender_searches($conn, array $diag_send
     if (!empty($diag_senders)) {
         foreach ($diag_senders as $sender) {
             $report[] = '--- Searching: UNSEEN FROM "' . $sender . '" ---';
-            indivisible_newsletter_diagnose_run_search($conn, 'SEARCH UNSEEN FROM "' . $sender . '"', $report);
+            indivisible_newsletter_diagnose_run_search($conn, 'SEARCH UNSEEN FROM "' . addcslashes($sender, '"\\') . '"', $report);
         }
     } else {
         $report[] = '--- Searching: UNSEEN (sender filter disabled) ---';
@@ -742,7 +740,7 @@ function indivisible_newsletter_diagnose() {
     // Also try just FROM last sender (including read messages).
     $last_sender = !empty($diag_senders) ? (string) end($diag_senders) : '';
     $report[] = '--- Searching: FROM "' . $last_sender . '" (including read) ---';
-    indivisible_newsletter_diagnose_run_search($conn, 'SEARCH FROM "' . $last_sender . '"', $report);
+    indivisible_newsletter_diagnose_run_search($conn, 'SEARCH FROM "' . addcslashes($last_sender, '"\\') . '"', $report);
     $report[] = '';
 
     $report[] = '--- Searching: ALL ---';

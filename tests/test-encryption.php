@@ -74,6 +74,37 @@ class Test_IN_Encryption extends WP_UnitTestCase {
 		$this->assertEquals( '', $decrypted );
 	}
 
+	public function test_decrypt_corrupted_ciphertext_returns_empty_string() {
+		$encrypted = indivisible_newsletter_encrypt( 'test-password' );
+		$data      = base64_decode( $encrypted );
+		// Corrupt the ciphertext portion (after the 16-byte IV).
+		$iv     = substr( $data, 0, 16 );
+		$cipher = substr( $data, 16 );
+		// Flip every byte in the ciphertext.
+		$corrupted = '';
+		for ( $i = 0, $len = strlen( $cipher ); $i < $len; $i++ ) {
+			$corrupted .= chr( ord( $cipher[ $i ] ) ^ 0xFF );
+		}
+		$corrupted_encrypted = base64_encode( $iv . $corrupted );
+
+		$result = indivisible_newsletter_decrypt( $corrupted_encrypted );
+
+		$this->assertSame( '', $result );
+	}
+
+	public function test_decrypt_wrong_key_returns_empty_string() {
+		// Manually encrypt with a different key than SECURE_AUTH_SALT.
+		$different_key = hash( 'sha256', 'completely-different-salt', true );
+		$iv            = openssl_random_pseudo_bytes( 16 );
+		$cipher        = openssl_encrypt( 'secret-data', 'aes-256-cbc', $different_key, 0, $iv );
+		$encrypted     = base64_encode( $iv . $cipher );
+
+		// Decrypt uses the test suite's SECURE_AUTH_SALT — key mismatch.
+		$result = indivisible_newsletter_decrypt( $encrypted );
+
+		$this->assertSame( '', $result );
+	}
+
 	public function test_encrypt_decrypt_long_password() {
 		$original  = str_repeat( 'a', 1000 );
 		$encrypted = indivisible_newsletter_encrypt( $original );

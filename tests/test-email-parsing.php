@@ -265,6 +265,86 @@ class Test_IN_Email_Parsing extends WP_UnitTestCase {
 		$this->assertStringContainsString( '<p>Unquoted boundary</p>', $result );
 	}
 
+	// --- IMAP search escaping ---
+
+	public function test_imap_search_escapes_sender_quotes() {
+		$GLOBALS['in_imap_tag_counter'] = 0;
+
+		// A sender address containing a double-quote that could cause IMAP injection.
+		$settings = array(
+			'filter_by_sender'  => true,
+			'qualified_senders' => 'evil"@example.com',
+		);
+
+		// Create socket pair to capture the command sent to the server.
+		$pair = stream_socket_pair( STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP );
+		fwrite( $pair[1], "* SEARCH \r\nA0001 OK SEARCH completed\r\n" );
+
+		indivisible_newsletter_imap_search_uids( $pair[0], $settings );
+
+		// Read what was sent.
+		stream_set_blocking( $pair[1], false );
+		$sent = fread( $pair[1], 1024 ) ?: '';
+
+		// The quote must be escaped with a backslash.
+		$this->assertStringContainsString( 'SEARCH FROM "evil\\"@example.com"', $sent );
+
+		fclose( $pair[0] );
+		fclose( $pair[1] );
+	}
+
+	// --- Debug temp file leak ---
+
+	public function test_fetch_process_message_no_temp_files() {
+		$GLOBALS['in_imap_tag_counter']   = 0;
+		$GLOBALS['in_imap_fetch_counter'] = 1000;
+
+		$uid      = 99999;
+		$tmp_file = '/tmp/newsletter_debug_msg_' . $uid . '.txt';
+
+		// Clean up from any previous test run.
+		if ( file_exists( $tmp_file ) ) {
+			unlink( $tmp_file );
+		}
+
+		$raw_header  = "From: sender@example.com\r\nSubject: Temp File Test\r\nMessage-ID: <temp-test@example.com>\r\n";
+		$header_size = strlen( $raw_header );
+
+		$full_body = "From: sender@example.com\r\nSubject: Temp File Test\r\n" .
+			"Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 7bit\r\n\r\n" .
+			'<p>Test content</p>';
+		$body_size = strlen( $full_body );
+
+		$pair = stream_socket_pair( STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP );
+
+		// Header fetch response.
+		$script  = "* {$uid} FETCH (BODY[HEADER] {{$header_size}}\r\n";
+		$script .= $raw_header;
+		$script .= ")\r\nF1001 OK FETCH completed\r\n";
+		// Body fetch response.
+		$script .= "* {$uid} FETCH (BODY[] {{$body_size}}\r\n";
+		$script .= $full_body;
+		$script .= ")\r\nF1002 OK FETCH completed\r\n";
+		// STORE response.
+		$script .= "A0001 OK STORE completed\r\n";
+
+		fwrite( $pair[1], $script );
+
+		$emails = array();
+		indivisible_newsletter_fetch_process_message( $pair[0], $uid, array(), $emails );
+
+		// No debug temp file should have been written.
+		$this->assertFileDoesNotExist( $tmp_file );
+
+		// Clean up just in case.
+		if ( file_exists( $tmp_file ) ) {
+			unlink( $tmp_file );
+		}
+
+		fclose( $pair[0] );
+		fclose( $pair[1] );
+	}
+
 	public function test_extract_html_folded_content_type_header() {
 		$raw = "Content-Type: multipart/alternative;\r\n\tboundary=\"folded-boundary\"\r\n\r\n" .
 			"--folded-boundary\r\n" .

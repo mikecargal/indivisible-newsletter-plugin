@@ -135,6 +135,71 @@ class Test_IN_Processor extends WP_UnitTestCase {
 		$this->assertEquals( 'INBOX', $settings['imap_folder'] );
 	}
 
+	public function test_create_post_sanitizes_html_tags() {
+		update_option( IN_OPTION_KEY, array(
+			'post_status'     => 'draft',
+			'post_category'   => 0,
+			'webmaster_email' => '',
+		) );
+
+		$email = array(
+			'subject'    => 'XSS Test',
+			'html'       => '<html><body><p>Safe content</p><script>alert(1)</script></body></html>',
+			'date'       => '2026-02-28',
+			'message_id' => 'xss-test-1',
+		);
+
+		$post_id = indivisible_newsletter_create_post_from_email( $email );
+		$post    = get_post( $post_id );
+
+		$this->assertStringNotContainsString( '<script>', $post->post_content );
+		$this->assertStringNotContainsString( '</script>', $post->post_content );
+		$this->assertStringContainsString( 'Safe content', $post->post_content );
+	}
+
+	public function test_create_post_sanitizes_event_handlers() {
+		update_option( IN_OPTION_KEY, array(
+			'post_status'     => 'draft',
+			'post_category'   => 0,
+			'webmaster_email' => '',
+		) );
+
+		$email = array(
+			'subject'    => 'Event Handler Test',
+			'html'       => '<html><body><img src="x" onerror="alert(1)"><p>Content</p></body></html>',
+			'date'       => '2026-02-28',
+			'message_id' => 'xss-test-2',
+		);
+
+		$post_id = indivisible_newsletter_create_post_from_email( $email );
+		$post    = get_post( $post_id );
+
+		$this->assertStringNotContainsString( 'onerror', $post->post_content );
+		$this->assertStringContainsString( 'Content', $post->post_content );
+	}
+
+	public function test_create_post_preserves_safe_html() {
+		update_option( IN_OPTION_KEY, array(
+			'post_status'     => 'draft',
+			'post_category'   => 0,
+			'webmaster_email' => '',
+		) );
+
+		$email = array(
+			'subject'    => 'Safe HTML Test',
+			'html'       => '<html><body><p>Paragraph</p><table><tr><td>Cell</td></tr></table><a href="https://example.com">Link</a></body></html>',
+			'date'       => '2026-02-28',
+			'message_id' => 'safe-html-test',
+		);
+
+		$post_id = indivisible_newsletter_create_post_from_email( $email );
+		$post    = get_post( $post_id );
+
+		$this->assertStringContainsString( '<p>Paragraph</p>', $post->post_content );
+		$this->assertStringContainsString( '<table>', $post->post_content );
+		$this->assertStringContainsString( '<a href="https://example.com">', $post->post_content );
+	}
+
 	public function test_get_settings_merges_with_saved() {
 		update_option( IN_OPTION_KEY, array(
 			'imap_host'   => 'mail.example.com',

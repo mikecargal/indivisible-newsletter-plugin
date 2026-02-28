@@ -71,6 +71,9 @@ function indivisible_newsletter_create_post_from_email($email) {
     // Build the post title from the email subject.
     $title = indivisible_newsletter_clean_subject($email['subject']);
 
+    // Sanitize HTML to remove dangerous tags/attributes (XSS prevention).
+    $html = wp_kses_post( $html );
+
     // Wrap HTML in a Gutenberg Custom HTML block.
     $content = "<!-- wp:html -->\n" . $html . "\n<!-- /wp:html -->";
 

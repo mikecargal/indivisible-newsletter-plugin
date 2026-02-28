@@ -142,7 +142,8 @@ function indivisible_newsletter_decrypt($encrypted) {
     }
     $iv     = substr($data, 0, 16);
     $cipher = substr($data, 16);
-    return openssl_decrypt($cipher, 'aes-256-cbc', $key, 0, $iv);
+    $result = openssl_decrypt($cipher, 'aes-256-cbc', $key, 0, $iv);
+    return $result === false ? '' : $result;
 }
 
 // --- Field rendering callbacks ---
