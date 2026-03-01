@@ -10,8 +10,17 @@
         </include>
     </coverage>
     <testsuites>
-        <testsuite name="Indivisible Newsletter">
-            <directory suffix=".php">./tests</directory>
+        <testsuite name="group1">
+            <file>./tests/test-cron.php</file>
+            <file>./tests/test-email-parsing.php</file>
+            <file>./tests/test-encryption.php</file>
+            <file>./tests/test-imap-connection.php</file>
+        </testsuite>
+        <testsuite name="group2">
+            <file>./tests/test-processor-extended.php</file>
+            <file>./tests/test-processor.php</file>
+            <file>./tests/test-sanitization.php</file>
+            <file>./tests/test-settings.php</file>
         </testsuite>
     </testsuites>
     <php>

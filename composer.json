@@ -2,6 +2,7 @@
     "name": "mikecargal/indivisible-newsletter",
     "description": "Indivisible Newsletter Poster - WordPress Plugin",
     "require-dev": {
+        "brianium/paratest": "^6.0",
         "phpunit/phpunit": "^9.6",
         "wp-phpunit/wp-phpunit": "^6.9",
         "yoast/phpunit-polyfills": "^3.0"

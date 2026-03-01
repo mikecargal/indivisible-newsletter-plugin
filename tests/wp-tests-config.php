@@ -6,7 +6,9 @@
  * framework drops and recreates all tables on each run.
  */
 
-define( 'DB_NAME', 'wordpress_test' );
+// Paratest sets TEST_TOKEN (1, 2, 3, ...) per process for database isolation.
+$db_suffix = getenv( 'TEST_TOKEN' ) ? '_' . getenv( 'TEST_TOKEN' ) : '';
+define( 'DB_NAME', 'wordpress_test' . $db_suffix );
 define( 'DB_USER', 'wordpress' );
 define( 'DB_PASSWORD', 'wordpress' );
 define( 'DB_HOST', 'db' );
