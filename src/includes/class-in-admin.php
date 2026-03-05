@@ -11,6 +11,16 @@ if (!defined('ABSPATH')) {
  * Register the settings page under the Settings menu.
  */
 add_action('admin_menu', 'indivisible_newsletter_add_settings_page');
+add_filter('plugin_action_links_indivisible-newsletter/indivisible-newsletter.php', 'indivisible_newsletter_plugin_action_links');
+
+/**
+ * Add Settings link on the Plugins list page.
+ */
+function indivisible_newsletter_plugin_action_links($links) {
+  $url = admin_url('options-general.php?page=indivisible-newsletter');
+  array_unshift($links, '<a href="' . esc_url($url) . '">Settings</a>');
+  return $links;
+}
 function indivisible_newsletter_add_settings_page() {
     add_options_page(
         'Newsletter Poster Settings',
