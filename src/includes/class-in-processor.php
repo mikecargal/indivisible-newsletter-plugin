@@ -174,9 +174,16 @@ function indivisible_newsletter_extract_forwarded_content($html) {
  * @return string Cleaned HTML.
  */
 function indivisible_newsletter_clean_html($html) {
-    // 1. Remove Unsubscribe links.
+    // 1. Remove Unsubscribe sentence (sentence containing an unsubscribe link).
+    // Match from the preceding <br> through the trailing period after </a>.
     $html = preg_replace(
-        '/<a\b[^>]*>(?:[^<]*\b[Uu]nsubscribe\b[^<]*)<\/a>/i',
+        '/<br\s*\/?>\s*[^<]*<a\b[^>]*>[^<]*\b[Uu]nsubscribe\b[^<]*<\/a\s*>\s*\.?/is',
+        '',
+        $html
+    );
+    // Fallback: remove standalone unsubscribe links without a preceding <br>.
+    $html = preg_replace(
+        '/<a\b[^>]*>[^<]*\b[Uu]nsubscribe\b[^<]*<\/a\s*>/is',
         '',
         $html
     );

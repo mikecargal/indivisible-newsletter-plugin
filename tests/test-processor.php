@@ -62,6 +62,19 @@ class Test_IN_Processor extends WP_UnitTestCase {
     $this->assertStringNotContainsString( 'unsubscribe', $result );
   }
 
+  public function test_clean_html_removes_sentence_around_unsubscribe_link() {
+    $html = '<p style="margin: 0">paid for by Indivisible<br />Columbus GA<br />'
+      . 'If you believe you received this message in error, please '
+      . '<a href="http://example.com/unsub">unsubscribe</a>.</p>';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    $this->assertStringContainsString( 'paid for by Indivisible', $result );
+    $this->assertStringContainsString( 'Columbus GA', $result );
+    $this->assertStringNotContainsString( 'unsubscribe', $result );
+    $this->assertStringNotContainsString( 'If you believe', $result );
+    $this->assertStringNotContainsString( 'please', $result );
+  }
+
   public function test_extract_forwarded_content_direct_email() {
     $html   = '<html><body><p>Direct content</p></body></html>';
     $result = indivisible_newsletter_extract_forwarded_content( $html );

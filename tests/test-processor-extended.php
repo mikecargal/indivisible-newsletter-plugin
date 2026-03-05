@@ -143,6 +143,36 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
     $this->assertStringNotContainsString( 'unsubscribe', $result );
   }
 
+  public function test_clean_html_removes_unsubscribe_sentence_keeps_prior_content() {
+    $html = '<p style="margin: 0">'
+      . 'paid for by Indivisible<br />Columbus GA Indivisibles<br />Columbus<br />'
+      . 'Columbus, GA 31904<br />United States<br />'
+      . 'If you believe you received this message in error or wish to no longer '
+      . 'receive email from us, please '
+      . '<a href="https://example.com/unsub?data=abc123">unsubscribe</a>.'
+      . '</p>';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    // Prior content preserved.
+    $this->assertStringContainsString( 'paid for by Indivisible', $result );
+    $this->assertStringContainsString( 'United States', $result );
+    // Unsubscribe sentence fully removed.
+    $this->assertStringNotContainsString( 'unsubscribe', $result );
+    $this->assertStringNotContainsString( 'If you believe', $result );
+    $this->assertStringNotContainsString( 'no longer receive email', $result );
+  }
+
+  public function test_clean_html_removes_unsubscribe_sentence_with_multiline_tag() {
+    // Real-world emails often have attributes split across lines.
+    $html = "<p>Footer text<br />Please "
+      . "<a\n  href=\"https://example.com/unsub\"\n  >unsubscribe</a\n>.</p>";
+    $result = indivisible_newsletter_clean_html( $html );
+
+    $this->assertStringContainsString( 'Footer text', $result );
+    $this->assertStringNotContainsString( 'unsubscribe', $result );
+    $this->assertStringNotContainsString( 'Please', $result );
+  }
+
   public function test_clean_html_preserves_non_unsubscribe_links() {
     $html = '<a href="http://example.com">Read More</a>';
     $result = indivisible_newsletter_clean_html( $html );
