@@ -17,6 +17,17 @@ define('IN_OPTION_KEY', 'indivisible_newsletter_settings');
 define('IN_PROCESSED_KEY', 'indivisible_newsletter_processed_ids');
 define('IN_CRON_HOOK', 'indivisible_newsletter_check_email');
 
+/**
+ * Log a message to the PHP error log, suppressed during tests.
+ *
+ * @param string $message Log message.
+ */
+function indivisible_newsletter_log( $message ) {
+    if ( ! defined( 'WP_TESTS_DOMAIN' ) ) {
+        error_log( $message ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+    }
+}
+
 // Include files.
 require_once IN_PLUGIN_DIR . 'includes/class-in-admin.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-email.php';

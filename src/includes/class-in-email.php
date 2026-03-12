@@ -121,38 +121,38 @@ function indivisible_newsletter_imap_search_uids($conn, array $settings): array 
  * @param array    $emails        Result array (passed by reference).
  */
 function indivisible_newsletter_fetch_process_message($conn, int $uid, array $processed_ids, array &$emails): void {
-    error_log(IN_LOG_MSG_PREFIX . $uid);
+    indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid);
 
     $header_data = indivisible_newsletter_imap_fetch_section($conn, $uid, 'HEADER');
     if (empty($header_data)) {
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - header fetch returned empty');
+        indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - header fetch returned empty');
         return;
     }
-    error_log(IN_LOG_MSG_PREFIX . $uid . ' - headers fetched (' . strlen($header_data) . IN_LOG_BYTES_SUFFIX);
+    indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - headers fetched (' . strlen($header_data) . IN_LOG_BYTES_SUFFIX);
 
     $headers    = indivisible_newsletter_parse_headers($header_data);
     $message_id = $headers['message-id'] ?? '';
 
-    error_log(IN_LOG_MSG_PREFIX . $uid . ' - Message-ID: ' . $message_id);
-    error_log(IN_LOG_MSG_PREFIX . $uid . ' - Subject: ' . ($headers['subject'] ?? IN_LOG_NONE));
+    indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - Message-ID: ' . $message_id);
+    indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - Subject: ' . ($headers['subject'] ?? IN_LOG_NONE));
 
     if (!empty($message_id) && in_array($message_id, $processed_ids, true)) {
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - SKIPPED (already processed)');
+        indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - SKIPPED (already processed)');
         return;
     }
 
     $subject   = indivisible_newsletter_decode_mime_header($headers['subject'] ?? 'Newsletter');
     $body_data = indivisible_newsletter_imap_fetch_section($conn, $uid, '');
 
-    error_log(IN_LOG_MSG_PREFIX . $uid . ' - fetching full body...');
-    error_log(IN_LOG_MSG_PREFIX . $uid . ' - body fetched (' . strlen($body_data) . IN_LOG_BYTES_SUFFIX);
+    indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - fetching full body...');
+    indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - body fetched (' . strlen($body_data) . IN_LOG_BYTES_SUFFIX);
 
     $html = '';
     if (!empty($body_data)) {
         $html = indivisible_newsletter_extract_html_from_raw($body_data);
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - HTML extracted (' . strlen($html) . IN_LOG_BYTES_SUFFIX);
+        indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - HTML extracted (' . strlen($html) . IN_LOG_BYTES_SUFFIX);
     } else {
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - body fetch returned empty');
+        indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - body fetch returned empty');
     }
 
     if (!empty($html)) {
@@ -163,9 +163,9 @@ function indivisible_newsletter_fetch_process_message($conn, int $uid, array $pr
             'date'       => $headers['date'] ?? '',
             'uid'        => $uid,
         );
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - QUEUED for post creation');
+        indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - QUEUED for post creation');
     } else {
-        error_log(IN_LOG_MSG_PREFIX . $uid . ' - SKIPPED (no HTML content found)');
+        indivisible_newsletter_log(IN_LOG_MSG_PREFIX . $uid . ' - SKIPPED (no HTML content found)');
     }
 
     indivisible_newsletter_imap_command($conn, 'STORE ' . $uid . ' +FLAGS (\\Seen)');
@@ -199,7 +199,7 @@ function indivisible_newsletter_fetch_emails() {
     // Search for messages (uses processed IDs list, not UNSEEN flag, to avoid duplicates
     // with messages already read in a mail client).
     $uids = indivisible_newsletter_imap_search_uids($conn, $settings);
-    error_log('Newsletter Poster: Search returned ' . count($uids) . ' message(s): ' . implode(', ', $uids));
+    indivisible_newsletter_log('Newsletter Poster: Search returned ' . count($uids) . ' message(s): ' . implode(', ', $uids));
 
     if (empty($uids)) {
         indivisible_newsletter_imap_command($conn, 'LOGOUT');
@@ -208,7 +208,7 @@ function indivisible_newsletter_fetch_emails() {
     }
 
     $processed_ids = get_option(IN_PROCESSED_KEY, array());
-    error_log('Newsletter Poster: ' . count($processed_ids) . ' previously processed ID(s)');
+    indivisible_newsletter_log('Newsletter Poster: ' . count($processed_ids) . ' previously processed ID(s)');
 
     $emails = array();
     foreach ($uids as $uid) {

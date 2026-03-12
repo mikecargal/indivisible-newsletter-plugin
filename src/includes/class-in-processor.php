@@ -18,7 +18,7 @@ function indivisible_newsletter_process_emails() {
     $emails = indivisible_newsletter_fetch_emails();
 
     if (is_wp_error($emails)) {
-        error_log('Newsletter Poster: ' . $emails->get_error_message());
+        indivisible_newsletter_log('Newsletter Poster: ' . $emails->get_error_message());
         return $emails;
     }
 
@@ -33,7 +33,7 @@ function indivisible_newsletter_process_emails() {
         $result = indivisible_newsletter_create_post_from_email($email);
 
         if (is_wp_error($result)) {
-            error_log('Newsletter Poster: Failed to create post for "' . $email['subject'] . '": ' . $result->get_error_message());
+            indivisible_newsletter_log('Newsletter Poster: Failed to create post for "' . $email['subject'] . '": ' . $result->get_error_message());
             continue;
         }
 
@@ -49,7 +49,7 @@ function indivisible_newsletter_process_emails() {
     update_option(IN_PROCESSED_KEY, $processed_ids);
 
     $message = "Processed {$count} newsletter email(s).";
-    error_log('Newsletter Poster: ' . $message);
+    indivisible_newsletter_log('Newsletter Poster: ' . $message);
     return $message;
 }
 
