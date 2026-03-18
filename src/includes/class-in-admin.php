@@ -161,52 +161,75 @@ function indivisible_newsletter_decrypt($encrypted) {
 function indivisible_newsletter_field_textarea($args) {
     $settings = indivisible_newsletter_get_settings();
     $field    = $args['field'];
-    $value    = esc_textarea($settings[$field] ?? '');
-    $placeholder = esc_attr($args['placeholder'] ?? '');
-    echo "<textarea name='" . IN_OPTION_KEY . "[{$field}]' rows='3' cols='40' placeholder='{$placeholder}' class='regular-text'>{$value}</textarea>";
+    printf(
+        "<textarea name='%s[%s]' rows='3' cols='40' placeholder='%s' class='regular-text'>%s</textarea>",
+        esc_attr( IN_OPTION_KEY ),
+        esc_attr( $field ),
+        esc_attr( $args['placeholder'] ?? '' ),
+        esc_textarea( $settings[ $field ] ?? '' )
+    );
     if (!empty($args['description'])) {
-        echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        printf( '<p class="description">%s</p>', esc_html( $args['description'] ) );
     }
 }
 
 function indivisible_newsletter_field_checkbox($args) {
     $settings = indivisible_newsletter_get_settings();
     $field    = $args['field'];
-    $checked  = !empty($settings[$field]) ? 'checked' : '';
-    $label    = esc_html($args['label'] ?? '');
-    echo "<label><input type='checkbox' name='" . IN_OPTION_KEY . "[{$field}]' value='1' {$checked} /> {$label}</label>";
+    $checked  = !empty($settings[ $field ]) ? " checked='checked'" : '';
+    printf(
+        "<label><input type='checkbox' name='%s[%s]' value='1'%s /> %s</label>",
+        esc_attr( IN_OPTION_KEY ),
+        esc_attr( $field ),
+        $checked, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static string, never user input.
+        esc_html( $args['label'] ?? '' )
+    );
 }
 
 function indivisible_newsletter_field_text($args) {
     $settings = indivisible_newsletter_get_settings();
     $field    = $args['field'];
-    $type     = $args['type'] ?? 'text';
-    $value    = esc_attr($settings[$field] ?? '');
-    $placeholder = esc_attr($args['placeholder'] ?? '');
-    echo "<input type='{$type}' name='" . IN_OPTION_KEY . "[{$field}]' value='{$value}' placeholder='{$placeholder}' class='regular-text' />";
+    printf(
+        "<input type='%s' name='%s[%s]' value='%s' placeholder='%s' class='regular-text' />",
+        esc_attr( $args['type'] ?? 'text' ),
+        esc_attr( IN_OPTION_KEY ),
+        esc_attr( $field ),
+        esc_attr( $settings[ $field ] ?? '' ),
+        esc_attr( $args['placeholder'] ?? '' )
+    );
     if (!empty($args['description'])) {
-        echo '<p class="description">' . esc_html($args['description']) . '</p>';
+        printf( '<p class="description">%s</p>', esc_html( $args['description'] ) );
     }
 }
 
 function indivisible_newsletter_field_password($args) {
     $settings = indivisible_newsletter_get_settings();
     $field    = $args['field'];
-    $has_password = !empty($settings[$field]);
+    $has_password = !empty($settings[ $field ]);
     $placeholder  = $has_password ? 'Password is set (leave blank to keep)' : 'Enter password';
-    echo "<input type='password' name='" . IN_OPTION_KEY . "[{$field}]' value='' placeholder='{$placeholder}' class='regular-text' />";
+    printf(
+        "<input type='password' name='%s[%s]' value='' placeholder='%s' class='regular-text' />",
+        esc_attr( IN_OPTION_KEY ),
+        esc_attr( $field ),
+        esc_attr( $placeholder )
+    );
 }
 
 function indivisible_newsletter_field_select($args) {
     $settings = indivisible_newsletter_get_settings();
     $field    = $args['field'];
-    $current  = $settings[$field] ?? '';
-    echo "<select name='" . IN_OPTION_KEY . "[{$field}]'>";
+    $current  = $settings[ $field ] ?? '';
+    printf( "<select name='%s[%s]'>", esc_attr( IN_OPTION_KEY ), esc_attr( $field ) );
     foreach ($args['options'] as $value => $label) {
-        $selected = selected($current, $value, false);
-        echo "<option value='{$value}' {$selected}>" . esc_html($label) . "</option>";
+        $selected = selected( $current, $value, false );
+        printf(
+            "<option value='%s' %s>%s</option>",
+            esc_attr( $value ),
+            $selected, // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- returned by WordPress selected() function.
+            esc_html( $label )
+        );
     }
-    echo "</select>";
+    echo '</select>';
 }
 
 function indivisible_newsletter_field_category($args) {

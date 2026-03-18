@@ -18,6 +18,7 @@
             <file>./tests/test-imap-connection.php</file>
         </testsuite>
         <testsuite name="group2">
+            <file>./tests/test-field-rendering.php</file>
             <file>./tests/test-processor-extended.php</file>
             <file>./tests/test-processor.php</file>
             <file>./tests/test-sanitization.php</file>
