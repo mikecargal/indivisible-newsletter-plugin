@@ -197,6 +197,60 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
     $this->assertStringContainsString( 'Regular table', $result );
   }
 
+  // --- responsive table fixes ---
+
+  public function test_clean_html_makes_row_content_tables_responsive() {
+    $html = '<table class="row-content stack" align="center" border="0" '
+      . 'cellpadding="0" cellspacing="0" role="presentation" '
+      . 'style="background-color:#fff;color:#000;width:600px;margin:0 auto" '
+      . 'width="600"><tbody><tr><td>Content</td></tr></tbody></table>';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    // Fixed width replaced with responsive width.
+    $this->assertStringContainsString( 'width:100%;max-width:600px', $result );
+    $this->assertDoesNotMatchRegularExpression( '/[^-]width:600px/', $result );
+    // HTML width attribute removed.
+    $this->assertStringNotContainsString( 'width="600"', $result );
+    // Content preserved.
+    $this->assertStringContainsString( 'Content', $result );
+  }
+
+  public function test_clean_html_handles_multiple_row_content_tables() {
+    $html = '<table class="row-content stack" style="width:600px" width="600">'
+      . '<tr><td>Row 1</td></tr></table>'
+      . '<table class="row-content stack" style="width:600px" width="600">'
+      . '<tr><td>Row 2</td></tr></table>';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    $this->assertDoesNotMatchRegularExpression( '/[^-]width:600px/', $result );
+    $this->assertStringNotContainsString( 'width="600"', $result );
+    $this->assertStringContainsString( 'Row 1', $result );
+    $this->assertStringContainsString( 'Row 2', $result );
+    $this->assertEquals( 2, substr_count( $result, 'width:100%;max-width:600px' ) );
+  }
+
+  public function test_clean_html_preserves_tables_without_fixed_width() {
+    $html = '<table class="social-table" width="176px" border="0">'
+      . '<tr><td>Social</td></tr></table>';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    // Non-row-content table untouched.
+    $this->assertStringContainsString( 'width="176px"', $result );
+    $this->assertStringContainsString( 'Social', $result );
+  }
+
+  public function test_clean_html_responsive_fix_with_border_radius() {
+    // Some row-content tables also have border-radius in their styles.
+    $html = '<table class="row-content stack" style="background-color:#fff;'
+      . 'color:#000;border-radius:0;width:600px;margin:0 auto" width="600">'
+      . '<tr><td>Styled</td></tr></table>';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    $this->assertStringContainsString( 'width:100%;max-width:600px', $result );
+    $this->assertDoesNotMatchRegularExpression( '/[^-]width:600px/', $result );
+    $this->assertStringContainsString( 'border-radius:0', $result );
+  }
+
   // --- create_post_from_email ---
 
   public function test_create_post_from_email_basic() {

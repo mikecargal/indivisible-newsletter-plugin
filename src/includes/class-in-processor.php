@@ -207,6 +207,23 @@ function indivisible_newsletter_clean_html($html) {
         $html
     );
 
+    // 4. Make row-content tables responsive.
+    // Email HTML has fixed width:600px inline styles and width="600" attributes
+    // that cause horizontal overflow on narrow screens. The original email includes
+    // a <style> media query to fix this, but wp_kses_post() strips <style> tags.
+    $html = preg_replace_callback(
+        '/(<table\b[^>]*class="[^"]*row-content[^"]*"[^>]*style="[^"]*?)width:\s*600px/i',
+        function ($m) {
+            return $m[1] . 'width:100%;max-width:600px';
+        },
+        $html
+    );
+    $html = preg_replace(
+        '/(<table\b[^>]*class="[^"]*row-content[^"]*"[^>]*)\s+width="600"/i',
+        '$1',
+        $html
+    );
+
     return $html;
 }
 
