@@ -224,6 +224,14 @@ function indivisible_newsletter_clean_html($html) {
         $html
     );
 
+    // 5. Remove width="600" from images that already have width:100% in their
+    // inline style. The HTML attribute overrides the CSS and prevents scaling.
+    $html = preg_replace(
+        '/(<img\b[^>]*style="[^"]*width:\s*100%[^"]*"[^>]*)\s+width="600"/i',
+        '$1',
+        $html
+    );
+
     return $html;
 }
 

@@ -251,6 +251,24 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
     $this->assertStringContainsString( 'border-radius:0', $result );
   }
 
+  public function test_clean_html_removes_width_attr_from_responsive_images() {
+    $html = '<img src="https://example.com/image.png" '
+      . 'style="display:block;height:auto;border:0;width:100%" '
+      . 'width="600" alt="" title="" height="auto">';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    $this->assertStringNotContainsString( 'width="600"', $result );
+    $this->assertStringContainsString( 'width:100%', $result );
+    $this->assertStringContainsString( 'height="auto"', $result );
+  }
+
+  public function test_clean_html_preserves_width_attr_on_non_responsive_images() {
+    $html = '<img src="https://example.com/icon.png" width="32" height="auto">';
+    $result = indivisible_newsletter_clean_html( $html );
+
+    $this->assertStringContainsString( 'width="32"', $result );
+  }
+
   // --- create_post_from_email ---
 
   public function test_create_post_from_email_basic() {
