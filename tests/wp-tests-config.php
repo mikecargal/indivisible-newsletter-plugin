@@ -6,9 +6,12 @@
  * framework drops and recreates all tables on each run.
  */
 
-// Paratest sets TEST_TOKEN (1, 2, 3, ...) per process for database isolation.
-$db_suffix = getenv( 'TEST_TOKEN' ) ? '_' . getenv( 'TEST_TOKEN' ) : '';
-define( 'DB_NAME', 'wordpress_test' . $db_suffix );
+// TEST_RUN_ID: unique per test invocation (set by test-run-wrapper.sh).
+// TEST_TOKEN: unique per paratest worker within a single invocation.
+// Together they ensure no two concurrent test processes share a database.
+$run_id    = getenv( 'TEST_RUN_ID' ) ? '_' . getenv( 'TEST_RUN_ID' ) : '';
+$db_suffix = getenv( 'TEST_TOKEN' )  ? '_' . getenv( 'TEST_TOKEN' )  : '';
+define( 'DB_NAME', 'wordpress_test' . $run_id . $db_suffix );
 define( 'DB_USER', 'wordpress' );
 define( 'DB_PASSWORD', 'wordpress' );
 define( 'DB_HOST', 'db' );
