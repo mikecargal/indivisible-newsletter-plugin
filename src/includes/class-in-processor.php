@@ -74,6 +74,14 @@ function indivisible_newsletter_create_post_from_email($email) {
     // Sanitize HTML to remove dangerous tags/attributes (XSS prevention).
     $html = wp_kses_post( $html );
 
+    // Wrap in a container that restores word-break behavior.
+    // Email HTML relies on word-break:break-word to prevent long URLs
+    // from forcing table cells wider than the viewport on mobile.
+    // wp_kses_post strips word-break from inline styles because it is
+    // not in WordPress's CSS allowlist. A CSS class survives kses; the
+    // actual rules are injected via wp_head in the main plugin file.
+    $html = '<div class="in-newsletter-content">' . $html . '</div>';
+
     // Wrap HTML in a Gutenberg Custom HTML block.
     $content = "<!-- wp:html -->\n" . $html . "\n<!-- /wp:html -->";
 

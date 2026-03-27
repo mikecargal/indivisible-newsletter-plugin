@@ -437,6 +437,33 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
     $this->assertStringContainsString( 'draft', $body );
   }
 
+  public function test_create_post_wraps_content_with_word_break() {
+    update_option( IN_OPTION_KEY, array(
+      'post_status'     => 'draft',
+      'post_category'   => 0,
+      'webmaster_email' => '',
+    ) );
+
+    $email = array(
+      'subject'    => 'Newsletter',
+      'html'       => '<p>Content with a <a href="https://example.com">long link</a></p>',
+      'date'       => self::EMAIL_DATE,
+      'message_id' => 'test-word-break',
+    );
+
+    $post_id = indivisible_newsletter_create_post_from_email( $email );
+    $post    = get_post( $post_id );
+
+    // Content must be wrapped in a div with in-newsletter-content class.
+    // The class triggers CSS rules (injected via wp_head) that restore
+    // word-break behavior stripped by wp_kses_post.
+    $this->assertStringContainsString(
+      '<div class="in-newsletter-content">',
+      $post->post_content
+    );
+    $this->assertStringContainsString( 'Content', $post->post_content );
+  }
+
   // --- process_emails (integration-level, mocked fetch) ---
 
   public function test_process_emails_tracks_processed_ids() {

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Indivisible Newsletter Poster
  * Description: Automatically monitors an email inbox and creates WordPress posts from newsletter emails.
- * Version: 1.1.3
+ * Version: 1.1.4
  * Author: Mike Cargal
  */
 
@@ -33,6 +33,15 @@ require_once IN_PLUGIN_DIR . 'includes/class-in-admin.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-email.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-processor.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-cron.php';
+
+// Frontend CSS for newsletter posts.
+add_action( 'wp_head', 'indivisible_newsletter_frontend_css' );
+/**
+ * Inject CSS that restores word-break behavior stripped by wp_kses_post.
+ */
+function indivisible_newsletter_frontend_css() {
+    echo '<style>.in-newsletter-content{overflow-wrap:break-word;word-break:break-word}</style>' . "\n";
+}
 
 // Activation hook.
 register_activation_hook(__FILE__, 'indivisible_newsletter_activate');
