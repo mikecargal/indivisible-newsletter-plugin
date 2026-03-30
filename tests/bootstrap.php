@@ -28,3 +28,6 @@ if ( ! defined( 'SECURE_AUTH_SALT' ) ) {
 
 // Start up the WP testing environment.
 require $_tests_dir . '/includes/bootstrap.php';
+
+require_once '/var/www/plugins/indivisible-shared/tests/lib/trait-assert-html.php';
+require_once __DIR__ . '/class-in-test-case.php';
