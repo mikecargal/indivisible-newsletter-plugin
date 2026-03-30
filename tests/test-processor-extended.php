@@ -12,16 +12,27 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
 
   private $sent_emails = array();
 
+  /** @var resource|null Server side of injected socket pair. */
+  private $injected_server = null;
+
   public function setUp(): void {
     parent::setUp();
     delete_option( IN_OPTION_KEY );
     $this->sent_emails = array();
+    $GLOBALS['in_imap_tag_counter']   = 0;
+    $GLOBALS['in_imap_fetch_counter'] = 1000;
+    $this->injected_server            = null;
     // Intercept wp_mail.
     add_filter( 'pre_wp_mail', array( $this, 'capture_email' ), 10, 2 );
   }
 
   public function tearDown(): void {
     remove_filter( 'pre_wp_mail', array( $this, 'capture_email' ) );
+    remove_all_filters( 'indivisible_newsletter_imap_socket_client' );
+    if ( is_resource( $this->injected_server ) ) {
+      fclose( $this->injected_server );
+      $this->injected_server = null;
+    }
     delete_option( IN_OPTION_KEY );
     delete_option( IN_PROCESSED_KEY );
     parent::tearDown();
@@ -464,29 +475,177 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
     $this->assertStringContainsString( 'Content', $post->post_content );
   }
 
-  // --- process_emails (integration-level, mocked fetch) ---
+  // --- IMAP socket helpers (for process_emails integration tests) ---
+
+  /**
+   * Build minimal IMAP settings merged with post-creation settings.
+   *
+   * @return array Settings suitable for IN_OPTION_KEY.
+   */
+  private function make_imap_settings(): array {
+    return array(
+      'imap_host'         => 'imap.example.com',
+      'imap_port'         => '993',
+      'imap_encryption'   => 'ssl',
+      'email_username'    => 'user@example.com',
+      'email_password'    => indivisible_newsletter_encrypt( 'secret' ),
+      'imap_folder'       => 'INBOX',
+      'filter_by_sender'  => false,
+      'qualified_senders' => '',
+      'post_status'       => 'draft',
+      'post_category'     => 0,
+      'webmaster_email'   => '',
+    );
+  }
+
+  /**
+   * Create a socket pair and optionally pre-load a server script.
+   *
+   * @param string $server_script Data to write on the server side.
+   * @return array{0: resource, 1: resource} [client, server].
+   */
+  private function make_socket_pair( string $server_script = '' ): array {
+    $pair = stream_socket_pair( STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP );
+    $this->assertIsArray( $pair, 'stream_socket_pair() must succeed' );
+    if ( $server_script !== '' ) {
+      fwrite( $pair[1], $server_script );
+    }
+    return $pair;
+  }
+
+  /**
+   * Inject a fake IMAP socket so fetch_emails() uses it instead of a real connection.
+   *
+   * @param resource $client Client side of socket pair.
+   * @param resource $server Server side (stored for tearDown cleanup).
+   */
+  private function inject_socket( $client, $server ): void {
+    $this->injected_server = $server;
+    add_filter(
+      'indivisible_newsletter_imap_socket_client',
+      function () use ( $client ) {
+        return $client;
+      }
+    );
+  }
+
+  /**
+   * Build an IMAP server script that returns $count messages.
+   *
+   * Each message has a unique Message-ID and minimal HTML content.
+   * UIDs are sequential starting from 1. The tag counter starts at A0001.
+   *
+   * @param int $count Number of messages to simulate.
+   * @return string Server script ready to feed to make_socket_pair().
+   */
+  private function build_imap_script_for_messages( int $count ): string {
+    // Greeting + LOGIN (A0001) + SELECT (A0002).
+    $script  = "* OK IMAP ready\r\n";
+    $script .= "A0001 OK LOGIN completed\r\n";
+    $script .= "A0002 OK SELECT completed\r\n";
+
+    // SEARCH ALL → UIDs 1..$count.
+    $uids    = implode( ' ', range( 1, $count ) );
+    $script .= "* SEARCH {$uids}\r\n";
+    $script .= "A0003 OK SEARCH completed\r\n";
+
+    // A-tag counter starts at A0004 (for STORE commands).
+    $a_tag   = 4;
+    // F-tag counter starts at F1001.
+    $f_tag   = 1001;
+
+    for ( $i = 1; $i <= $count; $i++ ) {
+      $msg_id      = "<new-msg-{$i}@example.com>";
+      $raw_header  = "From: sender@example.com\r\nSubject: Newsletter {$i}\r\nMessage-ID: {$msg_id}\r\n";
+      $header_size = strlen( $raw_header );
+
+      $full_body = "From: sender@example.com\r\nSubject: Newsletter {$i}\r\n"
+        . "Content-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 7bit\r\n\r\n"
+        . "<p>Content {$i}</p>";
+      $body_size = strlen( $full_body );
+
+      $f_header_tag = 'F' . $f_tag;
+      $f_tag++;
+      $f_body_tag = 'F' . $f_tag;
+      $f_tag++;
+
+      // Header fetch.
+      $script .= "* {$i} FETCH (BODY[HEADER] {{$header_size}}\r\n";
+      $script .= $raw_header;
+      $script .= ")\r\n{$f_header_tag} OK FETCH completed\r\n";
+
+      // Full body fetch.
+      $script .= "* {$i} FETCH (BODY[] {{$body_size}}\r\n";
+      $script .= $full_body;
+      $script .= ")\r\n{$f_body_tag} OK FETCH completed\r\n";
+
+      // STORE flags.
+      $a_store_tag = 'A' . str_pad( $a_tag, 4, '0', STR_PAD_LEFT );
+      $a_tag++;
+      $script .= "{$a_store_tag} OK STORE completed\r\n";
+    }
+
+    // LOGOUT.
+    $a_logout_tag = 'A' . str_pad( $a_tag, 4, '0', STR_PAD_LEFT );
+    $script      .= "{$a_logout_tag} OK LOGOUT\r\n";
+
+    return $script;
+  }
+
+  // --- process_emails (integration-level, fake IMAP socket) ---
 
   public function test_process_emails_tracks_processed_ids() {
-    // We can't easily mock IMAP, but we can test the processed ID tracking.
-    $processed = array( 'msg-1', 'msg-2' );
-    update_option( IN_PROCESSED_KEY, $processed );
+    update_option( IN_OPTION_KEY, $this->make_imap_settings() );
 
-    $stored = get_option( IN_PROCESSED_KEY );
+    $script = $this->build_imap_script_for_messages( 2 );
+    [ $client, $server ] = $this->make_socket_pair( $script );
+    $this->inject_socket( $client, $server );
+
+    $result = indivisible_newsletter_process_emails();
+
+    $this->assertStringContainsString( '2', $result );
+
+    $stored = get_option( IN_PROCESSED_KEY, array() );
     $this->assertCount( 2, $stored );
-    $this->assertContains( 'msg-1', $stored );
+    $this->assertContains( '<new-msg-1@example.com>', $stored );
+    $this->assertContains( '<new-msg-2@example.com>', $stored );
   }
 
   public function test_processed_ids_limit_to_500() {
-    // Simulate 505 processed IDs.
-    $ids = array();
-    for ( $i = 1; $i <= 505; $i++ ) {
-      $ids[] = "msg-{$i}";
+    update_option( IN_OPTION_KEY, $this->make_imap_settings() );
+
+    // Pre-seed the option with 498 previously-processed IDs.
+    $existing_ids = array();
+    for ( $i = 1; $i <= 498; $i++ ) {
+      $existing_ids[] = "<old-msg-{$i}@example.com>";
     }
-    // The code slices to last 500.
-    $trimmed = array_slice( $ids, -500 );
-    $this->assertCount( 500, $trimmed );
-    $this->assertEquals( 'msg-6', $trimmed[0] ); // Oldest kept.
-    $this->assertEquals( 'msg-505', end( $trimmed ) ); // Newest.
+    update_option( IN_PROCESSED_KEY, $existing_ids );
+
+    // Simulate 5 new messages via the fake IMAP server.
+    // After processing: 498 + 5 = 503 total → trimmed to 500 by production code.
+    $script = $this->build_imap_script_for_messages( 5 );
+    [ $client, $server ] = $this->make_socket_pair( $script );
+    $this->inject_socket( $client, $server );
+
+    $result = indivisible_newsletter_process_emails();
+
+    $this->assertStringContainsString( '5', $result );
+
+    $stored = get_option( IN_PROCESSED_KEY, array() );
+    $this->assertCount( 500, $stored );
+
+    // The oldest 3 pre-seeded IDs (old-msg-1 through old-msg-3) should be trimmed.
+    $this->assertNotContains( '<old-msg-1@example.com>', $stored );
+    $this->assertNotContains( '<old-msg-2@example.com>', $stored );
+    $this->assertNotContains( '<old-msg-3@example.com>', $stored );
+
+    // old-msg-4 should be the oldest surviving entry.
+    $this->assertEquals( '<old-msg-4@example.com>', $stored[0] );
+
+    // All 5 new message IDs should be present at the end.
+    $this->assertContains( '<new-msg-1@example.com>', $stored );
+    $this->assertContains( '<new-msg-5@example.com>', $stored );
+    $this->assertEquals( '<new-msg-5@example.com>', end( $stored ) );
   }
 
   // --- extract_forwarded_content edge cases ---
