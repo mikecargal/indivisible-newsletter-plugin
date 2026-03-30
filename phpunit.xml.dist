@@ -11,6 +11,7 @@
     </coverage>
     <testsuites>
         <testsuite name="group1">
+            <file>./tests/test-plugin-bootstrap.php</file>
             <file>./tests/test-admin-settings.php</file>
             <file>./tests/test-cron.php</file>
             <file>./tests/test-email-parsing.php</file>
