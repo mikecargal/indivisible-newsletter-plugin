@@ -4,6 +4,8 @@
  */
 class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
+  use AssertHtmlTrait;
+
   private int $admin_id;
 
   public function setUp(): void {
@@ -39,8 +41,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $links = indivisible_newsletter_plugin_action_links( array( 'deactivate' => '<a>Deactivate</a>' ) );
 
     $this->assertArrayHasKey( 0, $links );
-    $this->assertStringContainsString( 'Settings', $links[0] );
-    $this->assertStringContainsString( 'indivisible-newsletter', $links[0] );
+    $this->assertHtml( $links[0] )->find( 'a' )->containsText( 'Settings' );
+    $this->assertHtml( $links[0] )->find( 'a[href*="indivisible-newsletter"]' )->exists();
   }
 
   // --- Capability gating ---
@@ -60,21 +62,21 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
-    $this->assertStringContainsString( '<h1>Newsletter Poster Settings</h1>', $output );
+    $this->assertHtml( $output )->find( 'h1' )->containsText( 'Newsletter Poster Settings' );
   }
 
   public function test_render_wraps_in_div_wrap(): void {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
-    $this->assertStringContainsString( '<div class="wrap">', $output );
+    $this->assertHtml( $output )->find( 'div.wrap' )->exists();
   }
 
   public function test_form_action_is_options_php(): void {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
-    $this->assertStringContainsString( 'action="options.php"', $output );
+    $this->assertHtml( $output )->find( 'form[action="options.php"]' )->exists();
   }
 
   // --- Settings API sections ---
@@ -127,9 +129,9 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_text( array( 'field' => 'imap_host', 'placeholder' => 'imap.example.com' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( 'type=\'text\'', $output );
-    $this->assertStringContainsString( IN_OPTION_KEY . '[imap_host]', $output );
-    $this->assertStringContainsString( 'imap.example.com', $output );
+    $this->assertHtml( $output )->find( 'input[type="text"]' )->exists();
+    $this->assertHtml( $output )->find( 'input' )->hasAttribute( 'name', IN_OPTION_KEY . '[imap_host]' );
+    $this->assertHtml( $output )->find( 'input' )->hasAttribute( 'placeholder', 'imap.example.com' );
   }
 
   public function test_text_field_renders_description(): void {
@@ -139,8 +141,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_text( array( 'field' => 'webmaster_email', 'description' => 'Notify this address' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( 'Notify this address', $output );
-    $this->assertStringContainsString( 'class="description"', $output );
+    $this->assertHtml( $output )->find( 'p.description' )->containsText( 'Notify this address' );
   }
 
   public function test_number_field_renders_number_type(): void {
@@ -150,7 +151,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_text( array( 'field' => 'imap_port', 'type' => 'number' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( 'type=\'number\'', $output );
+    $this->assertHtml( $output )->find( 'input[type="number"]' )->exists();
   }
 
   public function test_password_field_no_password_set(): void {
@@ -161,7 +162,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_password( array( 'field' => 'email_password' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( 'type=\'password\'', $output );
+    $this->assertHtml( $output )->find( 'input[type="password"]' )->exists();
+    // assertHtml-ok: placeholder text is a substring; hasAttribute requires exact match
     $this->assertStringContainsString( 'Enter password', $output );
   }
 
@@ -173,6 +175,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_password( array( 'field' => 'email_password' ) );
     $output = ob_get_clean();
 
+    // assertHtml-ok: placeholder text is a substring; hasAttribute requires exact match
     $this->assertStringContainsString( 'Password is set', $output );
   }
 
@@ -186,10 +189,10 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( '<select', $output );
-    $this->assertStringContainsString( 'SSL', $output );
-    $this->assertStringContainsString( 'TLS', $output );
-    $this->assertStringContainsString( 'None', $output );
+    $this->assertHtml( $output )->find( 'select' )->exists();
+    $this->assertHtml( $output )->find( 'select' )->hasOptionWithValue( 'ssl' );
+    $this->assertHtml( $output )->find( 'select' )->hasOptionWithValue( 'tls' );
+    $this->assertHtml( $output )->find( 'select' )->hasOptionWithValue( 'none' );
   }
 
   public function test_checkbox_field_renders(): void {
@@ -199,8 +202,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_checkbox( array( 'field' => 'filter_by_sender', 'label' => 'Only filter' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( 'type=\'checkbox\'', $output );
-    $this->assertStringContainsString( 'Only filter', $output );
+    $this->assertHtml( $output )->find( 'input[type="checkbox"]' )->exists();
+    $this->assertHtml( $output )->find( 'label' )->containsText( 'Only filter' );
   }
 
   public function test_textarea_field_renders(): void {
@@ -214,9 +217,9 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( '<textarea', $output );
-    $this->assertStringContainsString( 'sender@example.com', $output );
-    $this->assertStringContainsString( 'One per line', $output );
+    $this->assertHtml( $output )->find( 'textarea' )->exists();
+    $this->assertHtml( $output )->find( 'textarea' )->hasAttribute( 'placeholder', 'sender@example.com' );
+    $this->assertHtml( $output )->find( 'p.description' )->containsText( 'One per line' );
   }
 
   public function test_category_field_renders_dropdown(): void {
@@ -226,8 +229,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_category( array( 'field' => 'post_category' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( '<select', $output );
-    $this->assertStringContainsString( IN_OPTION_KEY . '[post_category]', $output );
+    $this->assertHtml( $output )->find( 'select' )->exists();
+    $this->assertHtml( $output )->find( 'select' )->hasAttribute( 'name', IN_OPTION_KEY . '[post_category]' );
   }
 
   // --- Action buttons ---
@@ -236,24 +239,21 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
-    $this->assertStringContainsString( 'in_test_connection', $output );
-    $this->assertStringContainsString( 'Test Connection', $output );
+    $this->assertHtml( $output )->find( 'button[name="in_test_connection"]' )->containsText( 'Test Connection' );
   }
 
   public function test_check_now_button_present(): void {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
-    $this->assertStringContainsString( 'in_check_now', $output );
-    $this->assertStringContainsString( 'Check Now', $output );
+    $this->assertHtml( $output )->find( 'button[name="in_check_now"]' )->containsText( 'Check Now' );
   }
 
   public function test_diagnose_button_present(): void {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
-    $this->assertStringContainsString( 'in_diagnose', $output );
-    $this->assertStringContainsString( 'Diagnose', $output );
+    $this->assertHtml( $output )->find( 'button[name="in_diagnose"]' )->containsText( 'Diagnose' );
   }
 
   // --- Nonce fields ---
@@ -262,6 +262,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
+    // assertHtml-ok: dynamic nonce value, not HTML structure
     $nonce = wp_create_nonce( 'in_test_connection_action' );
     $this->assertStringContainsString( $nonce, $output );
   }
@@ -270,6 +271,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
+    // assertHtml-ok: dynamic nonce value, not HTML structure
     $nonce = wp_create_nonce( 'in_check_now_action' );
     $this->assertStringContainsString( $nonce, $output );
   }
@@ -278,6 +280,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
+    // assertHtml-ok: dynamic nonce value, not HTML structure
     $nonce = wp_create_nonce( 'in_diagnose_action' );
     $this->assertStringContainsString( $nonce, $output );
   }
@@ -290,6 +293,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $output = $this->render_page();
 
+    // assertHtml-ok: page has multiple <p class="description"> elements; API finds first match only
     $this->assertStringContainsString( 'No check is currently scheduled', $output );
   }
 
@@ -299,6 +303,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $output = $this->render_page();
 
+    // assertHtml-ok: page has multiple <p class="description"> elements; API finds first match only
     $this->assertStringContainsString( 'Next scheduled check', $output );
   }
 
@@ -308,7 +313,9 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     wp_set_current_user( $this->admin_id );
     $output = $this->render_page();
 
+    // assertHtml-ok: page has multiple <h2> tags; API finds first match only, can't select by text
     $this->assertStringContainsString( 'Reliable Scheduling', $output );
+    // assertHtml-ok: page has multiple <code> elements; API finds first match only
     $this->assertStringContainsString( 'wp-cron.php', $output );
     $this->assertStringContainsString( 'DISABLE_WP_CRON', $output );
   }
@@ -323,7 +330,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     indivisible_newsletter_field_text( array( 'field' => 'imap_host' ) );
     $output = ob_get_clean();
 
-    $this->assertStringContainsString( 'mail.custom.org', $output );
+    $this->assertHtml( $output )->find( 'input' )->hasAttribute( 'value', 'mail.custom.org' );
   }
 
   public function test_saved_encryption_selected_in_dropdown(): void {
@@ -337,10 +344,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     ) );
     $output = ob_get_clean();
 
-    $this->assertMatchesRegularExpression(
-      '/value=\'tls\'[^>]*selected/',
-      $output
-    );
+    $this->assertHtml( $output )->find( 'option[value="tls"][selected]' )->exists();
   }
 
   // --- Settings group registered ---
@@ -351,6 +355,6 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $output = $this->render_page();
 
-    $this->assertStringContainsString( 'indivisible_newsletter_group', $output );
+    $this->assertHtml( $output )->find( 'input[name="option_page"][value="indivisible_newsletter_group"]' )->exists();
   }
 }

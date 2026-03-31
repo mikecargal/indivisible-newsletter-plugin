@@ -7,6 +7,8 @@
  */
 class Test_IN_Field_Rendering extends WP_UnitTestCase {
 
+	use AssertHtmlTrait;
+
 	public function setUp(): void {
 		parent::setUp();
 		delete_option( IN_OPTION_KEY );
@@ -32,8 +34,8 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'imap_host',
 		) );
 
-		$this->assertStringContainsString( "type='text'", $html );
-		$this->assertStringContainsString( "name='indivisible_newsletter_settings[imap_host]'", $html );
+		$this->assertHtml( $html )->find( 'input[type="text"]' )->exists();
+		$this->assertHtml( $html )->find( 'input' )->hasAttribute( 'name', 'indivisible_newsletter_settings[imap_host]' );
 	}
 
 	public function test_text_field_renders_number_type(): void {
@@ -42,7 +44,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'type'  => 'number',
 		) );
 
-		$this->assertStringContainsString( "type='number'", $html );
+		$this->assertHtml( $html )->find( 'input[type="number"]' )->exists();
 	}
 
 	public function test_text_field_escapes_special_characters_in_value(): void {
@@ -52,7 +54,9 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'imap_host',
 		) );
 
+		// assertHtml-ok: verifying HTML escaping — raw <script> tag must not appear unescaped in attribute
 		$this->assertStringNotContainsString( '<script>', $html );
+		// assertHtml-ok: verifying HTML encoding of special chars in attribute value
 		$this->assertStringContainsString( '&lt;script&gt;', $html );
 		$this->assertStringContainsString( '&quot;', $html );
 	}
@@ -63,7 +67,9 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'placeholder' => 'host"<b>bold</b>',
 		) );
 
+		// assertHtml-ok: verifying HTML escaping — raw <b> tag must not appear in placeholder attribute
 		$this->assertStringNotContainsString( '<b>', $html );
+		// assertHtml-ok: verifying HTML encoding of tag in placeholder attribute
 		$this->assertStringContainsString( '&lt;b&gt;', $html );
 	}
 
@@ -73,7 +79,8 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'description' => 'Notify this <b>email</b>',
 		) );
 
-		$this->assertStringContainsString( '<p class="description">', $html );
+		$this->assertHtml( $html )->find( 'p.description' )->exists();
+		// assertHtml-ok: verifying escaped HTML encoding in text node content
 		$this->assertStringContainsString( 'Notify this &lt;b&gt;email&lt;/b&gt;', $html );
 	}
 
@@ -86,6 +93,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'qualified_senders',
 		) );
 
+		// assertHtml-ok: verifying textarea injection is escaped — raw </textarea><script> must not appear
 		$this->assertStringNotContainsString( '</textarea><script>', $html );
 	}
 
@@ -94,7 +102,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'qualified_senders',
 		) );
 
-		$this->assertStringContainsString( "name='indivisible_newsletter_settings[qualified_senders]'", $html );
+		$this->assertHtml( $html )->find( 'textarea' )->hasAttribute( 'name', 'indivisible_newsletter_settings[qualified_senders]' );
 	}
 
 	public function test_textarea_renders_placeholder(): void {
@@ -103,7 +111,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'placeholder' => 'user@example.com',
 		) );
 
-		$this->assertStringContainsString( "placeholder='user@example.com'", $html );
+		$this->assertHtml( $html )->find( 'textarea' )->hasAttribute( 'placeholder', 'user@example.com' );
 	}
 
 	// --- Select field ---
@@ -117,11 +125,12 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			),
 		) );
 
-		$this->assertStringContainsString( "name='indivisible_newsletter_settings[imap_encryption]'", $html );
-		// Option values must be escaped.
+		$this->assertHtml( $html )->find( 'select' )->hasAttribute( 'name', 'indivisible_newsletter_settings[imap_encryption]' );
+		// assertHtml-ok: verifying HTML encoding of double-quote in option value attribute
 		$this->assertStringContainsString( 'val&quot;ue', $html );
-		// Option labels must be escaped.
+		// assertHtml-ok: verifying raw <b> tag is not present in label text
 		$this->assertStringNotContainsString( '<b>Two</b>', $html );
+		// assertHtml-ok: verifying HTML encoding of tag in option label
 		$this->assertStringContainsString( '&lt;b&gt;Two&lt;/b&gt;', $html );
 	}
 
@@ -133,7 +142,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'options' => array( 'ssl' => 'SSL', 'tls' => 'TLS', 'none' => 'None' ),
 		) );
 
-		$this->assertStringContainsString( "value='tls'  selected='selected'", $html );
+		$this->assertHtml( $html )->find( 'option[value="tls"][selected]' )->exists();
 	}
 
 	// --- Checkbox field ---
@@ -144,10 +153,10 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'label' => 'Enable sender filter',
 		) );
 
-		$this->assertStringContainsString( "type='checkbox'", $html );
-		$this->assertStringContainsString( "name='indivisible_newsletter_settings[filter_by_sender]'", $html );
-		$this->assertStringContainsString( "value='1'", $html );
-		$this->assertStringContainsString( 'Enable sender filter', $html );
+		$this->assertHtml( $html )->find( 'input[type="checkbox"]' )->exists();
+		$this->assertHtml( $html )->find( 'input[type="checkbox"]' )->hasAttribute( 'name', 'indivisible_newsletter_settings[filter_by_sender]' );
+		$this->assertHtml( $html )->find( 'input[type="checkbox"]' )->hasAttribute( 'value', '1' );
+		$this->assertHtml( $html )->find( 'label' )->containsText( 'Enable sender filter' );
 	}
 
 	public function test_checkbox_renders_checked_when_enabled(): void {
@@ -158,7 +167,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'label' => 'Enable sender filter',
 		) );
 
-		$this->assertStringContainsString( 'checked', $html );
+		$this->assertHtml( $html )->find( 'input[type="checkbox"]' )->hasAttribute( 'checked' );
 	}
 
 	public function test_checkbox_escapes_label(): void {
@@ -167,7 +176,9 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'label' => 'Filter <script>xss</script>',
 		) );
 
+		// assertHtml-ok: verifying raw <script> tag does not appear unescaped in label text
 		$this->assertStringNotContainsString( '<script>xss</script>', $html );
+		// assertHtml-ok: verifying HTML encoding of script tag in label
 		$this->assertStringContainsString( '&lt;script&gt;xss&lt;/script&gt;', $html );
 	}
 
@@ -180,8 +191,9 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'email_password',
 		) );
 
-		$this->assertStringContainsString( "type='password'", $html );
-		$this->assertStringContainsString( "value=''", $html );
+		$this->assertHtml( $html )->find( 'input[type="password"]' )->exists();
+		$this->assertHtml( $html )->find( 'input[type="password"]' )->hasAttribute( 'value', '' );
+		// assertHtml-ok: security verification — stored encrypted value must not appear in rendered output
 		$this->assertStringNotContainsString( 'encrypted-secret-value', $html );
 	}
 
@@ -192,6 +204,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'email_password',
 		) );
 
+		// assertHtml-ok: placeholder text is a substring of the full placeholder string; hasAttribute requires exact match
 		$this->assertStringContainsString( 'Password is set', $html );
 	}
 
@@ -200,6 +213,7 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'email_password',
 		) );
 
+		// assertHtml-ok: placeholder text; hasAttribute requires exact match
 		$this->assertStringContainsString( 'Enter password', $html );
 	}
 
@@ -208,6 +222,6 @@ class Test_IN_Field_Rendering extends WP_UnitTestCase {
 			'field' => 'email_password',
 		) );
 
-		$this->assertStringContainsString( "name='indivisible_newsletter_settings[email_password]'", $html );
+		$this->assertHtml( $html )->find( 'input[type="password"]' )->hasAttribute( 'name', 'indivisible_newsletter_settings[email_password]' );
 	}
 }
