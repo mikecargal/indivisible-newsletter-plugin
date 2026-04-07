@@ -250,4 +250,34 @@ class Test_IN_Sanitization extends WP_UnitTestCase {
     $result = indivisible_newsletter_sanitize_settings( $input );
     $this->assertStringNotContainsString( '<script>', $result['imap_folder'] );
   }
+
+  // --- Fallback paths: missing keys use defaults ---
+
+  public function test_sanitize_empty_input_uses_defaults_for_all_keys(): void {
+    $defaults = indivisible_newsletter_get_defaults();
+    $result   = indivisible_newsletter_sanitize_settings( array() );
+
+    $this->assertSame( $defaults['imap_host'], $result['imap_host'] );
+    $this->assertSame( (int) $defaults['imap_port'], $result['imap_port'] );
+    $this->assertSame( $defaults['imap_encryption'], $result['imap_encryption'] );
+    $this->assertSame( $defaults['email_username'], $result['email_username'] );
+    $this->assertSame( $defaults['imap_folder'], $result['imap_folder'] );
+    $this->assertFalse( $result['filter_by_sender'] );
+    $this->assertSame( $defaults['qualified_senders'], $result['qualified_senders'] );
+    $this->assertSame( $defaults['check_interval'], $result['check_interval'] );
+    $this->assertSame( $defaults['post_status'], $result['post_status'] );
+  }
+
+  public function test_sanitize_partial_input_fills_missing_from_defaults(): void {
+    $defaults = indivisible_newsletter_get_defaults();
+    $result   = indivisible_newsletter_sanitize_settings( array(
+      'imap_host' => 'custom.example.com',
+    ) );
+
+    // Provided key should be used.
+    $this->assertSame( 'custom.example.com', $result['imap_host'] );
+    // Missing keys should use defaults.
+    $this->assertSame( (int) $defaults['imap_port'], $result['imap_port'] );
+    $this->assertSame( $defaults['imap_encryption'], $result['imap_encryption'] );
+  }
 }
