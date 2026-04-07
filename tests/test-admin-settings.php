@@ -320,6 +320,70 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $this->assertStringContainsString( 'DISABLE_WP_CRON', $output );
   }
 
+  // --- POST action handler behavior ---
+
+  public function test_check_now_handler_renders_error_when_settings_missing(): void {
+    wp_set_current_user( $this->admin_id );
+    delete_option( IN_OPTION_KEY );
+
+    $_POST['in_check_now'] = '1';
+    $_REQUEST['_wpnonce']  = wp_create_nonce( 'in_check_now_action' );
+
+    $output = $this->render_page();
+
+    unset( $_POST['in_check_now'], $_REQUEST['_wpnonce'] );
+
+    $this->assertHtml( $output )->find( 'div.notice-error' )->exists();
+  }
+
+  public function test_check_now_handler_dies_without_valid_nonce(): void {
+    wp_set_current_user( $this->admin_id );
+    delete_option( IN_OPTION_KEY );
+
+    $_POST['in_check_now'] = '1';
+    // No nonce set — check_admin_referer calls wp_die().
+
+    $this->expectException( 'WPDieException' );
+
+    try {
+      ob_start();
+      indivisible_newsletter_render_settings_page();
+    } finally {
+      ob_end_clean();
+      unset( $_POST['in_check_now'] );
+    }
+  }
+
+  public function test_test_connection_handler_renders_error_when_settings_missing(): void {
+    wp_set_current_user( $this->admin_id );
+    delete_option( IN_OPTION_KEY );
+
+    $_POST['in_test_connection'] = '1';
+    $_REQUEST['_wpnonce']        = wp_create_nonce( 'in_test_connection_action' );
+
+    $output = $this->render_page();
+
+    unset( $_POST['in_test_connection'], $_REQUEST['_wpnonce'] );
+
+    $this->assertHtml( $output )->find( 'div.notice-error' )->exists();
+  }
+
+  public function test_diagnose_handler_renders_report_when_settings_missing(): void {
+    wp_set_current_user( $this->admin_id );
+    delete_option( IN_OPTION_KEY );
+
+    $_POST['in_diagnose']  = '1';
+    $_REQUEST['_wpnonce']  = wp_create_nonce( 'in_diagnose_action' );
+
+    $output = $this->render_page();
+
+    unset( $_POST['in_diagnose'], $_REQUEST['_wpnonce'] );
+
+    // Diagnose should render a report (either error or diagnostic output in <pre>).
+    // assertHtml-ok: checking presence of pre tag for diagnostic report
+    $this->assertStringContainsString( '<pre', $output );
+  }
+
   // --- Saved values reflected ---
 
   public function test_saved_host_reflected_in_text_field(): void {
