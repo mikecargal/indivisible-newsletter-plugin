@@ -17,6 +17,7 @@
             <file>./tests/test-email-parsing.php</file>
             <file>./tests/test-encryption.php</file>
             <file>./tests/test-imap-connection.php</file>
+            <file>./tests/test-imap-parser.php</file>
         </testsuite>
         <testsuite name="group2">
             <file>./tests/test-field-rendering.php</file>
