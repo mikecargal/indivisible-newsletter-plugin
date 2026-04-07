@@ -66,4 +66,24 @@ class Test_Plugin_Bootstrap extends WP_UnitTestCase {
 
 		$this->assertFalse( wp_next_scheduled( IN_CRON_HOOK ) );
 	}
+
+	// --- Uninstall ---
+
+	public function test_uninstall_removes_options_and_cron(): void {
+		// Set up data that uninstall should clean.
+		update_option( 'indivisible_newsletter_settings', array( 'imap_host' => 'test' ) );
+		update_option( 'indivisible_newsletter_processed_ids', array( 1, 2, 3 ) );
+		wp_schedule_single_event( time() + 3600, 'indivisible_newsletter_check_email' );
+
+		// Define the guard constant so uninstall.php doesn't exit.
+		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
+			define( 'WP_UNINSTALL_PLUGIN', true );
+		}
+
+		require dirname( __DIR__ ) . '/src/uninstall.php';
+
+		$this->assertFalse( get_option( 'indivisible_newsletter_settings' ) );
+		$this->assertFalse( get_option( 'indivisible_newsletter_processed_ids' ) );
+		$this->assertFalse( wp_next_scheduled( 'indivisible_newsletter_check_email' ) );
+	}
 }
