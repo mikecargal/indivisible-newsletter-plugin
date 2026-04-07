@@ -128,6 +128,14 @@ class Test_IN_Sanitization extends WP_UnitTestCase {
     $this->assertFalse( $result['filter_by_sender'] );
   }
 
+  public function test_sanitize_filter_by_sender_absent_key_means_disabled() {
+    $input = $this->get_valid_input();
+    unset( $input['filter_by_sender'] );
+
+    $result = indivisible_newsletter_sanitize_settings( $input );
+    $this->assertFalse( $result['filter_by_sender'] );
+  }
+
   public function test_sanitize_qualified_senders_sanitizes_emails() {
     $input = $this->get_valid_input();
     $input['qualified_senders'] = "valid@example.com\ninvalid<>@email\nother@test.com";
