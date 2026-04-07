@@ -29,4 +29,41 @@ class Test_Plugin_Bootstrap extends WP_UnitTestCase {
 		$this->assertStringContainsString( '.in-newsletter-content', $output );
 		$this->assertStringContainsString( 'break-word', $output );
 	}
+
+	// --- Activation / Deactivation ---
+
+	public function test_activate_creates_default_options_when_missing(): void {
+		delete_option( IN_OPTION_KEY );
+
+		indivisible_newsletter_activate();
+
+		$this->assertNotEmpty( get_option( IN_OPTION_KEY ) );
+	}
+
+	public function test_activate_does_not_overwrite_existing_options(): void {
+		$custom = array( 'imap_host' => 'custom.example.com' );
+		update_option( IN_OPTION_KEY, $custom );
+
+		indivisible_newsletter_activate();
+
+		$saved = get_option( IN_OPTION_KEY );
+		$this->assertEquals( 'custom.example.com', $saved['imap_host'] );
+	}
+
+	public function test_activate_schedules_cron(): void {
+		wp_clear_scheduled_hook( IN_CRON_HOOK );
+
+		indivisible_newsletter_activate();
+
+		$this->assertNotFalse( wp_next_scheduled( IN_CRON_HOOK ) );
+	}
+
+	public function test_deactivate_clears_cron(): void {
+		wp_schedule_single_event( time() + 3600, IN_CRON_HOOK );
+		$this->assertNotFalse( wp_next_scheduled( IN_CRON_HOOK ) );
+
+		indivisible_newsletter_deactivate();
+
+		$this->assertFalse( wp_next_scheduled( IN_CRON_HOOK ) );
+	}
 }
