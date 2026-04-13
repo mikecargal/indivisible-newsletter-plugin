@@ -578,7 +578,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $_REQUEST = array();
   }
 
-  public function test_recent_newsletters_renderer_inserts_inline_notice_row_for_reprocessed_post(): void {
+  public function test_recent_newsletters_renderer_emits_notice_above_table_when_reprocessed(): void {
     $post_id = $this->factory->post->create( array(
       'post_title' => 'Reprocess Target',
       'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
@@ -589,18 +589,28 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $html = indivisible_newsletter_render_recent_newsletters_section( $post_id, $notice_html );
 
+    // The notice lives in a dedicated wrapper div outside the table, placed
+    // directly below the <h2>Recent Newsletters</h2> heading.
+    $this->assertHtml( $html )
+      ->find( 'div.in-recent-newsletters-notice' )
+      ->exists();
+    $this->assertHtml( $html )
+      ->find( 'div.in-recent-newsletters-notice div.notice-success' )
+      ->exists();
+    $this->assertHtml( $html )
+      ->find( 'div.in-recent-newsletters-notice div.notice-success' )
+      ->containsText( 'Reprocess Target' );
+
+    // The notice wrapper must NOT live inside the table — that was the
+    // broken approach (browser foster-parented the inner notice div out
+    // of the table). Asserting absence of the old tr selector prevents
+    // regression to that approach.
     $this->assertHtml( $html )
       ->find( 'tr.in-reprocess-notice' )
-      ->exists();
-    $this->assertHtml( $html )
-      ->find( 'tr.in-reprocess-notice td[colspan="5"]' )
-      ->exists();
-    $this->assertHtml( $html )
-      ->find( 'tr.in-reprocess-notice div.notice-success' )
-      ->exists();
+      ->doesNotExist();
   }
 
-  public function test_recent_newsletters_renderer_omits_inline_notice_when_no_reprocess(): void {
+  public function test_recent_newsletters_renderer_omits_notice_when_no_reprocess(): void {
     $post_id = $this->factory->post->create( array(
       'post_title' => 'Normal Post',
       'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
@@ -610,7 +620,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $html = indivisible_newsletter_render_recent_newsletters_section();
 
     $this->assertHtml( $html )
-      ->find( 'tr.in-reprocess-notice' )
+      ->find( 'div.in-recent-newsletters-notice' )
       ->doesNotExist();
   }
 }

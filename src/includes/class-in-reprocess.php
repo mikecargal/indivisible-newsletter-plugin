@@ -68,13 +68,18 @@ function indivisible_newsletter_reprocess_post( int $post_id ) {
  * _in_newsletter_raw_body meta. Each row offers View and Reprocess buttons.
  *
  * When a reprocess action has just run, the caller passes the affected
- * post ID and a pre-built admin notice HTML. The renderer inserts that
- * notice as a full-width row directly after the matching post's row,
- * wrapped in an ARIA live region so screen readers announce it.
+ * post ID and a pre-built admin notice HTML. The renderer emits that
+ * notice as a div directly below the "Recent Newsletters" heading and
+ * above the table, keeping the notice close to the section the user
+ * was clicking in without triggering HTML-table parsing quirks that
+ * foster-parent content out of table cells.
  *
- * @param int    $reprocessed_post_id     Post ID whose row should be followed
- *                                         by an inline notice (0 = no inline
- *                                         notice). Defaults to 0.
+ * @param int    $reprocessed_post_id     Post ID that was just reprocessed (used
+ *                                         as a "did a reprocess happen" guard;
+ *                                         the notice above the table renders
+ *                                         when this is non-zero AND the notice
+ *                                         HTML is non-empty). 0 = no notice.
+ *                                         Defaults to 0.
  * @param string $reprocessed_notice_html Pre-escaped admin notice HTML to
  *                                         render inline in an ARIA live
  *                                         region below the reprocessed row.
@@ -107,6 +112,11 @@ function indivisible_newsletter_render_recent_newsletters_section(
     ?>
     <hr />
     <h2>Recent Newsletters</h2>
+    <?php if ( $reprocessed_post_id && '' !== $reprocessed_notice_html ) : ?>
+        <div class="in-recent-newsletters-notice">
+            <?php echo $reprocessed_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler ?>
+        </div>
+    <?php endif; ?>
     <?php if ( empty( $posts ) ) : ?>
         <p class="description">No newsletter posts from the last 90 days. Posts created before the reprocess feature shipped are not shown.</p>
     <?php else : ?>
@@ -149,15 +159,6 @@ function indivisible_newsletter_render_recent_newsletters_section(
                             </form>
                         </td>
                     </tr>
-                    <?php if ( $reprocessed_post_id && (int) $post->ID === $reprocessed_post_id && '' !== $reprocessed_notice_html ) : ?>
-                        <tr class="in-reprocess-notice">
-                            <td colspan="5">
-                                <div class="in-reprocess-notice-content">
-                                    <?php echo $reprocessed_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler ?>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endif; ?>
                 <?php endforeach; ?>
             </tbody>
         </table>
