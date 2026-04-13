@@ -67,9 +67,26 @@ function indivisible_newsletter_reprocess_post( int $post_id ) {
  * Lists newsletter-origin posts from the last 90 days that have the
  * _in_newsletter_raw_body meta. Each row offers View and Reprocess buttons.
  *
+ * When a reprocess action has just run, the caller passes the affected
+ * post ID and a pre-built admin notice HTML. The renderer inserts that
+ * notice as a full-width row directly after the matching post's row,
+ * wrapped in an ARIA live region so screen readers announce it.
+ *
+ * @param int    $reprocessed_post_id     Post ID whose row should be followed
+ *                                         by an inline notice (0 = no inline
+ *                                         notice). Defaults to 0.
+ * @param string $reprocessed_notice_html Pre-escaped admin notice HTML to
+ *                                         render inline in an ARIA live
+ *                                         region below the reprocessed row.
+ *                                         Ignored if $reprocessed_post_id
+ *                                         doesn't match any rendered row or
+ *                                         this string is empty. Defaults to ''.
  * @return string HTML markup.
  */
-function indivisible_newsletter_render_recent_newsletters_section(): string {
+function indivisible_newsletter_render_recent_newsletters_section(
+    int $reprocessed_post_id = 0,
+    string $reprocessed_notice_html = ''
+): string {
     $posts = get_posts( array(
         'post_type'      => 'post',
         'post_status'    => 'any',
@@ -132,6 +149,15 @@ function indivisible_newsletter_render_recent_newsletters_section(): string {
                             </form>
                         </td>
                     </tr>
+                    <?php if ( $reprocessed_post_id && (int) $post->ID === $reprocessed_post_id && '' !== $reprocessed_notice_html ) : ?>
+                        <tr class="in-reprocess-notice">
+                            <td colspan="5">
+                                <div class="in-reprocess-notice-content" role="status" aria-live="polite">
+                                    <?php echo $reprocessed_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler ?>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endif; ?>
                 <?php endforeach; ?>
             </tbody>
         </table>
@@ -143,44 +169,53 @@ function indivisible_newsletter_render_recent_newsletters_section(): string {
 /**
  * Handle a Reprocess form submission from the settings page.
  *
- * Returns an admin notice HTML string (success or error) that the caller
- * can echo at the top of the settings page. Returns empty string when the
- * form was not submitted or the nonce is missing/invalid.
+ * Returns an associative array describing the outcome:
+ *   - 'post_id' (int|null): the post that was reprocessed, or null if no
+ *     action was taken (no POST data, invalid nonce, or invalid post_id).
+ *   - 'notice'  (string):    an admin notice HTML string for the caller to
+ *     display inline, or '' when no action was taken. Error notices use the
+ *     notice-error class; success notices use notice-success. The renderer
+ *     places this inline next to the reprocessed row (see
+ *     indivisible_newsletter_render_recent_newsletters_section).
  *
- * @return string Admin notice HTML, or '' if no action was performed.
+ * @return array{post_id:int|null,notice:string}
  */
-function indivisible_newsletter_handle_reprocess_action(): string {
+function indivisible_newsletter_handle_reprocess_action(): array {
     // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified below
     if ( ! isset( $_POST['in_reprocess'] ) || ! isset( $_POST['in_reprocess_post_id'] ) ) {
-        return '';
+        return array( 'post_id' => null, 'notice' => '' );
     }
 
     // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized via absint()
     $post_id = absint( $_POST['in_reprocess_post_id'] );
     if ( 0 === $post_id ) {
-        return '';
+        return array( 'post_id' => null, 'notice' => '' );
     }
 
-    // check_admin_referer dies on failure by default; use wp_verify_nonce
-    // so the test harness can assert "no action taken" without triggering wp_die.
     $nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
     if ( ! wp_verify_nonce( $nonce, 'in_reprocess_action_' . $post_id ) ) {
-        return '';
+        return array( 'post_id' => null, 'notice' => '' );
     }
 
     $result = indivisible_newsletter_reprocess_post( $post_id );
 
     if ( is_wp_error( $result ) ) {
-        return '<div class="notice notice-error"><p>' . esc_html( $result->get_error_message() ) . '</p></div>';
+        return array(
+            'post_id' => $post_id,
+            'notice'  => '<div class="notice notice-error"><p>' . esc_html( $result->get_error_message() ) . '</p></div>',
+        );
     }
 
     $post      = get_post( $post_id );
     $title     = $post ? $post->post_title : '(unknown)';
     $permalink = $post ? get_permalink( $post_id ) : '#';
 
-    return sprintf(
-        '<div class="notice notice-success"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank" rel="noopener">view post</a></p></div>',
-        esc_html( $title ),
-        esc_url( $permalink )
+    return array(
+        'post_id' => $post_id,
+        'notice'  => sprintf(
+            '<div class="notice notice-success"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank" rel="noopener">view post</a></p></div>',
+            esc_html( $title ),
+            esc_url( $permalink )
+        ),
     );
 }

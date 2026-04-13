@@ -280,16 +280,13 @@ function indivisible_newsletter_render_settings_page() {
     }
 
     // Handle "Reprocess" action submissions (per-row buttons in the Recent Newsletters table).
-    $reprocess_notice = indivisible_newsletter_handle_reprocess_action();
+    // Returns an array with 'post_id' (int|null) and 'notice' (string); the renderer below
+    // places the notice inline next to the reprocessed post's row.
+    $reprocess_result = indivisible_newsletter_handle_reprocess_action();
 
     ?>
     <div class="wrap">
         <h1>Newsletter Poster Settings</h1>
-        <?php
-        // Reprocess admin notice (success or error), echoed at the top of the page
-        // so it appears above the settings form. Empty string when no action ran.
-        echo $reprocess_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler
-        ?>
         <form method="post" action="options.php">
             <?php
             settings_fields('indivisible_newsletter_group');
@@ -333,8 +330,13 @@ function indivisible_newsletter_render_settings_page() {
         }
 
         // Recent Newsletters section (table with per-row Reprocess buttons).
-        // Helper returns a pre-escaped HTML string built from trusted post data.
-        echo indivisible_newsletter_render_recent_newsletters_section(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside render function
+        // Passes the reprocess result so the renderer can place an inline admin
+        // notice directly under the reprocessed post's row. Both the table HTML
+        // and the inline notice are pre-escaped inside the helper.
+        echo indivisible_newsletter_render_recent_newsletters_section(
+            (int) ( $reprocess_result['post_id'] ?? 0 ),
+            (string) ( $reprocess_result['notice'] ?? '' )
+        ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside render function
         ?>
 
         <hr />

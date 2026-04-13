@@ -517,9 +517,11 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
       'in_reprocess_post_id' => (string) $post_id,
     );
 
-    $notice = indivisible_newsletter_handle_reprocess_action();
+    $result = indivisible_newsletter_handle_reprocess_action();
 
-    $this->assertSame( '', $notice, 'Handler should return empty string when nonce is missing' );
+    $this->assertIsArray( $result, 'Handler should return an array' );
+    $this->assertSame( '', $result['notice'], 'Handler should return empty notice when nonce is missing' );
+    $this->assertNull( $result['post_id'], 'Handler should return null post_id when no action was taken' );
     $this->assertSame( 'ORIGINAL', get_post( $post_id )->post_content, 'Post content must not change without valid nonce' );
 
     $_POST = array();
@@ -537,11 +539,13 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     );
     $_REQUEST = $_POST;
 
-    $notice = indivisible_newsletter_handle_reprocess_action();
+    $result = indivisible_newsletter_handle_reprocess_action();
 
-    $this->assertHtml( $notice )->find( 'div.notice-success' )->exists();
-    $this->assertHtml( $notice )->find( 'div.notice-success' )->containsText( 'Newsletter XYZ' );
-    $this->assertHtml( $notice )->find( 'div.notice-success a' )->exists();
+    $this->assertIsArray( $result );
+    $this->assertSame( $post_id, $result['post_id'], 'Result post_id should match the reprocessed post' );
+    $this->assertHtml( $result['notice'] )->find( 'div.notice-success' )->exists();
+    $this->assertHtml( $result['notice'] )->find( 'div.notice-success' )->containsText( 'Newsletter XYZ' );
+    $this->assertHtml( $result['notice'] )->find( 'div.notice-success a' )->exists();
 
     $_POST    = array();
     $_REQUEST = array();
@@ -559,9 +563,11 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     );
     $_REQUEST = $_POST;
 
-    $notice = indivisible_newsletter_handle_reprocess_action();
+    $result = indivisible_newsletter_handle_reprocess_action();
 
-    $this->assertHtml( $notice )->find( 'div.notice-error' )->exists();
+    $this->assertIsArray( $result );
+    $this->assertSame( $post_id, $result['post_id'], 'Result post_id should match the attempted post even on error' );
+    $this->assertHtml( $result['notice'] )->find( 'div.notice-error' )->exists();
     $this->assertSame(
       'ORIGINAL',
       get_post( $post_id )->post_content,
@@ -570,5 +576,47 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $_POST    = array();
     $_REQUEST = array();
+  }
+
+  public function test_recent_newsletters_renderer_inserts_inline_notice_row_for_reprocessed_post(): void {
+    $post_id = $this->factory->post->create( array(
+      'post_title' => 'Reprocess Target',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+    ) );
+    update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $notice_html = '<div class="notice notice-success"><p>Reprocessed: <strong>Reprocess Target</strong></p></div>';
+
+    $html = indivisible_newsletter_render_recent_newsletters_section( $post_id, $notice_html );
+
+    $this->assertHtml( $html )
+      ->find( 'tr.in-reprocess-notice' )
+      ->exists();
+    $this->assertHtml( $html )
+      ->find( 'tr.in-reprocess-notice td[colspan="5"]' )
+      ->exists();
+    $this->assertHtml( $html )
+      ->find( 'tr.in-reprocess-notice div.in-reprocess-notice-content' )
+      ->hasAttribute( 'role', 'status' );
+    $this->assertHtml( $html )
+      ->find( 'tr.in-reprocess-notice div.in-reprocess-notice-content' )
+      ->hasAttribute( 'aria-live', 'polite' );
+    $this->assertHtml( $html )
+      ->find( 'tr.in-reprocess-notice div.notice-success' )
+      ->exists();
+  }
+
+  public function test_recent_newsletters_renderer_omits_inline_notice_when_no_reprocess(): void {
+    $post_id = $this->factory->post->create( array(
+      'post_title' => 'Normal Post',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+    ) );
+    update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $html = indivisible_newsletter_render_recent_newsletters_section();
+
+    $this->assertHtml( $html )
+      ->find( 'tr.in-reprocess-notice' )
+      ->doesNotExist();
   }
 }
