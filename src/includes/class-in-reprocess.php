@@ -41,6 +41,24 @@ function indivisible_newsletter_reprocess_post( int $post_id ) {
         );
     }
 
-    // Happy path implemented in Task 6.
-    return new WP_Error( 'not_implemented', 'Reprocess happy path not yet implemented.' );
+    // Happy path: run the current cleaner against the stored raw body and
+    // update the post content via wp_update_post (which auto-creates a revision).
+    $cleaned = indivisible_newsletter_clean_html( $raw_body );
+    $cleaned = wp_kses_post( $cleaned );
+    $wrapped = '<div class="in-newsletter-content">' . $cleaned . '</div>';
+    $content = "<!-- wp:html -->\n" . $wrapped . "\n<!-- /wp:html -->";
+
+    $update_result = wp_update_post(
+        array(
+            'ID'           => $post_id,
+            'post_content' => $content,
+        ),
+        true
+    );
+
+    if ( is_wp_error( $update_result ) ) {
+        return $update_result;
+    }
+
+    return true;
 }

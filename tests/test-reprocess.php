@@ -44,4 +44,22 @@ class Test_IN_Reprocess extends IN_Test_Case {
         $this->assertInstanceOf( WP_Error::class, $result );
         $this->assertSame( 'reprocess_no_raw_body', $result->get_error_code() );
     }
+
+    public function test_reprocess_updates_post_content_with_cleaned_raw_body(): void {
+        wp_set_current_user( $this->factory->user->create( array( 'role' => 'administrator' ) ) );
+
+        $raw_body = '<table class="nl-container" style="background-color: #0068a5"><tr><td>Hello</td></tr></table>';
+        $post_id  = $this->factory->post->create( array( 'post_content' => 'OLD CONTENT' ) );
+        update_post_meta( $post_id, '_in_newsletter_raw_body', $raw_body );
+
+        $result = indivisible_newsletter_reprocess_post( $post_id );
+
+        $this->assertTrue( $result, 'Reprocess should return true on success' );
+
+        $post = get_post( $post_id );
+        $this->assertStringNotContainsString( 'OLD CONTENT', $post->post_content );
+        $this->assertStringContainsString( 'in-newsletter-content', $post->post_content );
+        $this->assertStringContainsString( 'Hello', $post->post_content );
+        $this->assertStringContainsString( '<!-- wp:html -->', $post->post_content );
+    }
 }
