@@ -196,26 +196,7 @@ function indivisible_newsletter_clean_html($html) {
         $html
     );
 
-    // 2. Set nl-container background to theme background color.
-    // The nl-container table has an inline background-color that clashes with the site theme.
-    $html = preg_replace_callback(
-        '/(<table\b[^>]*class="nl-container"[^>]*style="[^"]*?)background-color:\s*[^;"]+;?/i',
-        function ($m) {
-            return $m[1] . 'background-color: var(--wp--preset--color--background);';
-        },
-        $html
-    );
-
-    // 3. Set text color to black on the nl-container.
-    $html = preg_replace_callback(
-        '/(<table\b[^>]*class="nl-container"[^>]*style=")([^"]*")/i',
-        function ($m) {
-            return $m[1] . 'color: #000000; ' . $m[2];
-        },
-        $html
-    );
-
-    // 4. Make row-content tables responsive.
+    // 2. Make row-content tables responsive.
     // Email HTML has fixed width:600px inline styles and width="600" attributes
     // that cause horizontal overflow on narrow screens. The original email includes
     // a <style> media query to fix this, but wp_kses_post() strips <style> tags.
@@ -232,7 +213,7 @@ function indivisible_newsletter_clean_html($html) {
         $html
     );
 
-    // 5. Remove width="600" from images that already have width:100% in their
+    // 3. Remove width="600" from images that already have width:100% in their
     // inline style. The HTML attribute overrides the CSS and prevents scaling.
     $html = preg_replace(
         '/(<img\b[^>]*style="[^"]*width:\s*100%[^"]*"[^>]*)\s+width="600"/i',

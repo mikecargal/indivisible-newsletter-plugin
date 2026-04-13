@@ -5,7 +5,7 @@
  * Covers forwarded content extraction edge cases, HTML cleaning,
  * post creation details, and webmaster notifications.
  */
-class Test_IN_Processor_Extended extends WP_UnitTestCase {
+class Test_IN_Processor_Extended extends IN_Test_Case {
 
   private const EMAIL_DATE       = '2026-02-17';
   private const WEBMASTER_EMAIL  = 'admin@example.com';
@@ -190,16 +190,28 @@ class Test_IN_Processor_Extended extends WP_UnitTestCase {
     $this->assertStringContainsString( 'Read More', $result );
   }
 
-  public function test_clean_html_sets_nl_container_background() {
-    $html = '<table class="nl-container" style="background-color: #ffffff; padding: 10px;">Content</table>';
+  public function test_clean_html_does_not_rewrite_nl_container_background_color(): void {
+    $html = '<table class="nl-container" style="background-color: #f0f0f0; padding: 10px;">Content</table>';
+
     $result = indivisible_newsletter_clean_html( $html );
-    $this->assertStringContainsString( 'background-color: var(--wp--preset--color--background)', $result );
+
+    $this->assertHtml( $result )
+      ->find( 'table.nl-container[style*="background-color: #f0f0f0"]' )
+      ->exists();
+
+    $this->assertHtml( $result )
+      ->find( 'table.nl-container[style*="var(--wp--preset--color--background)"]' )
+      ->doesNotExist();
   }
 
-  public function test_clean_html_adds_text_color_to_nl_container() {
-    $html = '<table class="nl-container" style="padding: 10px;">Content</table>';
+  public function test_clean_html_does_not_force_black_text_color_on_nl_container(): void {
+    $html = '<table class="nl-container" style="background-color: #ffffff;">Content</table>';
+
     $result = indivisible_newsletter_clean_html( $html );
-    $this->assertStringContainsString( 'color: #000000;', $result );
+
+    $this->assertHtml( $result )
+      ->find( 'table.nl-container[style*="color: #000000"]' )
+      ->doesNotExist();
   }
 
   public function test_clean_html_preserves_other_content() {

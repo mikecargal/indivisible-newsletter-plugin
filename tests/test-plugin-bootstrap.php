@@ -5,7 +5,7 @@
  * @package Indivisible_Newsletter
  */
 
-class Test_Plugin_Bootstrap extends WP_UnitTestCase {
+class Test_Plugin_Bootstrap extends IN_Test_Case {
 	public function test_version_constant_matches_plugin_header(): void {
 		$plugin_data = get_file_data(
 			dirname( __DIR__ ) . '/src/indivisible-newsletter.php',
@@ -28,6 +28,66 @@ class Test_Plugin_Bootstrap extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( '.in-newsletter-content', $output );
 		$this->assertStringContainsString( 'break-word', $output );
+	}
+
+	public function test_frontend_css_outputs_wrapper_background_and_foreground(): void {
+		ob_start();
+		indivisible_newsletter_frontend_css();
+		$output = ob_get_clean();
+
+		$this->assertHtml( $output )->find( 'style' )->exists();
+
+		$this->assertMatchesRegularExpression(
+			'/\.in-newsletter-content\s*\{[^}]*background-color\s*:\s*#ffffff/i',
+			$output
+		);
+		$this->assertMatchesRegularExpression(
+			'/\.in-newsletter-content\s*\{[^}]*color\s*:\s*#000000/i',
+			$output
+		);
+	}
+
+	public function test_frontend_css_outputs_wrapper_centering(): void {
+		ob_start();
+		indivisible_newsletter_frontend_css();
+		$output = ob_get_clean();
+
+		$this->assertHtml( $output )->find( 'style' )->exists();
+
+		$this->assertMatchesRegularExpression(
+			'/\.in-newsletter-content\s*\{[^}]*max-width\s*:/i',
+			$output
+		);
+		$this->assertMatchesRegularExpression(
+			'/\.in-newsletter-content\s*\{[^}]*margin\s*:[^;}]*auto/i',
+			$output
+		);
+	}
+
+	public function test_frontend_css_forces_color_inheritance_on_descendants(): void {
+		ob_start();
+		indivisible_newsletter_frontend_css();
+		$output = ob_get_clean();
+
+		$this->assertHtml( $output )->find( 'style' )->exists();
+
+		$this->assertMatchesRegularExpression(
+			'/\.in-newsletter-content\s*\*\s*\{[^}]*color\s*:\s*inherit/i',
+			$output
+		);
+	}
+
+	public function test_frontend_css_overrides_nl_container_background(): void {
+		ob_start();
+		indivisible_newsletter_frontend_css();
+		$output = ob_get_clean();
+
+		$this->assertHtml( $output )->find( 'style' )->exists();
+
+		$this->assertMatchesRegularExpression(
+			'/\.in-newsletter-content\s+table\.nl-container\s*\{[^}]*background\s*:\s*transparent\s*!important/i',
+			$output
+		);
 	}
 
 	// --- Activation / Deactivation ---
