@@ -747,4 +747,19 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
         'Post meta _in_newsletter_raw_subject should equal the unmodified $email["subject"]'
     );
   }
+
+  public function test_build_post_content_runs_pipeline_and_wraps_output(): void {
+    $raw = '<p>Hello <strong>World</strong></p>';
+
+    $content = indivisible_newsletter_build_post_content( $raw );
+
+    $this->assertStringStartsWith( "<!-- wp:html -->\n", $content );
+    $this->assertStringEndsWith( "\n<!-- /wp:html -->", $content );
+    $this->assertHtml( $content )
+      ->find( 'div.in-newsletter-content' )
+      ->exists();
+    $this->assertHtml( $content )
+      ->find( 'div.in-newsletter-content' )
+      ->containsText( 'Hello World' );
+  }
 }

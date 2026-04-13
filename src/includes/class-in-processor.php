@@ -68,25 +68,12 @@ function indivisible_newsletter_create_post_from_email($email) {
     // Capture the post-extract, pre-clean HTML for the reprocess feature.
     $raw_body = $html;
 
-    // Clean the HTML.
-    $html = indivisible_newsletter_clean_html($html);
-
     // Build the post title from the email subject.
     $title = indivisible_newsletter_clean_subject($email['subject']);
 
-    // Sanitize HTML to remove dangerous tags/attributes (XSS prevention).
-    $html = wp_kses_post( $html );
-
-    // Wrap in a container that restores word-break behavior.
-    // Email HTML relies on word-break:break-word to prevent long URLs
-    // from forcing table cells wider than the viewport on mobile.
-    // wp_kses_post strips word-break from inline styles because it is
-    // not in WordPress's CSS allowlist. A CSS class survives kses; the
-    // actual rules are injected via wp_head in the main plugin file.
-    $html = '<div class="in-newsletter-content">' . $html . '</div>';
-
-    // Wrap HTML in a Gutenberg Custom HTML block.
-    $content = "<!-- wp:html -->\n" . $html . "\n<!-- /wp:html -->";
+    // Build the final post content via the shared pipeline (clean → kses →
+    // .in-newsletter-content wrap → Gutenberg HTML block).
+    $content = indivisible_newsletter_build_post_content( $html );
 
     // Create the post.
     $post_data = array(
@@ -241,6 +228,29 @@ function indivisible_newsletter_clean_html($html) {
     );
 
     return $html;
+}
+
+/**
+ * Build the final post_content value from pre-clean newsletter HTML.
+ *
+ * Applies the standard pipeline used for both initial post creation and
+ * reprocess: run the cleaner, sanitize via wp_kses_post, wrap in the
+ * .in-newsletter-content div, and wrap in a Gutenberg HTML block comment.
+ *
+ * The .in-newsletter-content wrapper restores word-break behavior that
+ * wp_kses_post strips from inline styles (via a plugin-provided CSS class).
+ *
+ * @param string $raw_html Post-extract, pre-clean HTML (output of
+ *                         indivisible_newsletter_extract_forwarded_content,
+ *                         or the stored _in_newsletter_raw_body meta).
+ * @return string Fully wrapped post_content ready for wp_insert_post /
+ *                wp_update_post.
+ */
+function indivisible_newsletter_build_post_content( string $raw_html ): string {
+    $cleaned = indivisible_newsletter_clean_html( $raw_html );
+    $cleaned = wp_kses_post( $cleaned );
+    $wrapped = '<div class="in-newsletter-content">' . $cleaned . '</div>';
+    return "<!-- wp:html -->\n" . $wrapped . "\n<!-- /wp:html -->";
 }
 
 /**
