@@ -279,9 +279,17 @@ function indivisible_newsletter_render_settings_page() {
         $diagnose_output = indivisible_newsletter_diagnose();
     }
 
+    // Handle "Reprocess" action submissions (per-row buttons in the Recent Newsletters table).
+    $reprocess_notice = indivisible_newsletter_handle_reprocess_action();
+
     ?>
     <div class="wrap">
         <h1>Newsletter Poster Settings</h1>
+        <?php
+        // Reprocess admin notice (success or error), echoed at the top of the page
+        // so it appears above the settings form. Empty string when no action ran.
+        echo $reprocess_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler
+        ?>
         <form method="post" action="options.php">
             <?php
             settings_fields('indivisible_newsletter_group');
@@ -323,6 +331,10 @@ function indivisible_newsletter_render_settings_page() {
         } else {
             echo '<p class="description" style="color: #d63638;">No check is currently scheduled. Save settings to schedule.</p>';
         }
+
+        // Recent Newsletters section (table with per-row Reprocess buttons).
+        // Helper returns a pre-escaped HTML string built from trusted post data.
+        echo indivisible_newsletter_render_recent_newsletters_section(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside render function
         ?>
 
         <hr />
