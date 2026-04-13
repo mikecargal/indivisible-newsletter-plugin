@@ -728,4 +728,23 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
         'Post meta _in_newsletter_message_id should equal $email["message_id"]'
     );
   }
+
+  public function test_create_post_stores_raw_subject_meta(): void {
+    $email = array(
+        'subject'    => 'Fwd: April General Assembly Recap',
+        'html'       => '<p>Body</p>',
+        'date'       => '2026-04-12',
+        'message_id' => '<id@example.com>',
+    );
+
+    $post_id = indivisible_newsletter_create_post_from_email( $email );
+
+    $this->assertIsInt( $post_id );
+    $stored = get_post_meta( $post_id, '_in_newsletter_raw_subject', true );
+    $this->assertSame(
+        'Fwd: April General Assembly Recap',
+        $stored,
+        'Post meta _in_newsletter_raw_subject should equal the unmodified $email["subject"]'
+    );
+  }
 }

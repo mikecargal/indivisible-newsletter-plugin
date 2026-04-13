@@ -121,6 +121,12 @@ function indivisible_newsletter_create_post_from_email($email) {
         update_post_meta( $post_id, '_in_newsletter_message_id', $email['message_id'] );
     }
 
+    // Store the unmodified subject (pre-clean_subject) so the Recent Newsletters
+    // table can distinguish "Fwd:" forwards from direct deliveries at a glance.
+    if ( ! empty( $email['subject'] ) ) {
+        update_post_meta( $post_id, '_in_newsletter_raw_subject', $email['subject'] );
+    }
+
     // Send notification email.
     indivisible_newsletter_notify_webmaster($post_id, $title, $settings);
 
