@@ -109,7 +109,7 @@ function indivisible_newsletter_render_recent_newsletters_section(): string {
                     $message_id  = (string) get_post_meta( $post->ID, '_in_newsletter_message_id', true );
                     $raw_subject = (string) get_post_meta( $post->ID, '_in_newsletter_raw_subject', true );
                     $mid_display = strlen( $message_id ) > 40 ? substr( $message_id, 0, 40 ) . '…' : $message_id;
-                    $sub_display = mb_strlen( $raw_subject ) > 60 ? mb_substr( $raw_subject, 0, 60 ) . '…' : $raw_subject;
+                    $sub_display = mb_strlen( $raw_subject, 'UTF-8' ) > 60 ? mb_substr( $raw_subject, 0, 60, 'UTF-8' ) . '…' : $raw_subject;
                     ?>
                     <tr>
                         <td>
