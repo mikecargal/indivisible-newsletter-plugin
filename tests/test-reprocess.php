@@ -58,8 +58,11 @@ class Test_IN_Reprocess extends IN_Test_Case {
 
         $post = get_post( $post_id );
         $this->assertStringNotContainsString( 'OLD CONTENT', $post->post_content );
-        $this->assertStringContainsString( 'in-newsletter-content', $post->post_content );
-        $this->assertStringContainsString( 'Hello', $post->post_content );
-        $this->assertStringContainsString( '<!-- wp:html -->', $post->post_content );
+        $this->assertHtml( $post->post_content )
+            ->find( 'div.in-newsletter-content' )
+            ->exists();
+        $this->assertHtml( $post->post_content )
+            ->find( 'div.in-newsletter-content' )
+            ->containsText( 'Hello' );
     }
 }
