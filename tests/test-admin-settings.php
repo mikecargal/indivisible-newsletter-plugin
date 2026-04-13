@@ -596,12 +596,6 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
       ->find( 'tr.in-reprocess-notice td[colspan="5"]' )
       ->exists();
     $this->assertHtml( $html )
-      ->find( 'tr.in-reprocess-notice div.in-reprocess-notice-content' )
-      ->hasAttribute( 'role', 'status' );
-    $this->assertHtml( $html )
-      ->find( 'tr.in-reprocess-notice div.in-reprocess-notice-content' )
-      ->hasAttribute( 'aria-live', 'polite' );
-    $this->assertHtml( $html )
       ->find( 'tr.in-reprocess-notice div.notice-success' )
       ->exists();
   }

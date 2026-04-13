@@ -152,7 +152,7 @@ function indivisible_newsletter_render_recent_newsletters_section(
                     <?php if ( $reprocessed_post_id && (int) $post->ID === $reprocessed_post_id && '' !== $reprocessed_notice_html ) : ?>
                         <tr class="in-reprocess-notice">
                             <td colspan="5">
-                                <div class="in-reprocess-notice-content" role="status" aria-live="polite">
+                                <div class="in-reprocess-notice-content">
                                     <?php echo $reprocessed_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler ?>
                                 </div>
                             </td>
