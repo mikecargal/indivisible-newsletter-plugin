@@ -762,4 +762,25 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
       ->find( 'div.in-newsletter-content' )
       ->containsText( 'Hello World' );
   }
+
+  public function test_build_post_content_includes_unique_build_timestamp(): void {
+    $raw = '<p>Body</p>';
+
+    $first  = indivisible_newsletter_build_post_content( $raw );
+    $second = indivisible_newsletter_build_post_content( $raw );
+
+    // Each call must emit a distinct <!-- built: ISO --> comment between the
+    // Gutenberg block-open marker and the .in-newsletter-content div so that
+    // consecutive builds produce byte-distinct output (see test_reprocess_is_idempotent).
+    $this->assertMatchesRegularExpression(
+      '/<!-- built: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z -->/',
+      $first,
+      'Helper output must contain a <!-- built: ISO8601 --> comment'
+    );
+    $this->assertNotSame(
+      $first,
+      $second,
+      'Two calls to build_post_content with the same input must produce different output due to the unique build timestamp'
+    );
+  }
 }

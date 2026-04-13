@@ -236,6 +236,10 @@ function indivisible_newsletter_clean_html($html) {
  * Applies the standard pipeline used for both initial post creation and
  * reprocess: run the cleaner, sanitize via wp_kses_post, wrap in the
  * .in-newsletter-content div, and wrap in a Gutenberg HTML block comment.
+ * Also injects a unique ISO-8601 UTC "built:" timestamp comment inside the
+ * block wrapper so consecutive calls produce byte-distinct output — this
+ * prevents WordPress's revision deduper from hiding short-circuits in the
+ * reprocess path and provides a provenance audit trail.
  *
  * The .in-newsletter-content wrapper restores word-break behavior that
  * wp_kses_post strips from inline styles (via a plugin-provided CSS class).
@@ -250,7 +254,17 @@ function indivisible_newsletter_build_post_content( string $raw_html ): string {
     $cleaned = indivisible_newsletter_clean_html( $raw_html );
     $cleaned = wp_kses_post( $cleaned );
     $wrapped = '<div class="in-newsletter-content">' . $cleaned . '</div>';
-    return "<!-- wp:html -->\n" . $wrapped . "\n<!-- /wp:html -->";
+
+    // Unique ISO-8601 UTC timestamp (microsecond precision) injected as an
+    // HTML comment between the Gutenberg block marker and the content wrapper.
+    // Invisible when rendered; guarantees each build produces byte-distinct
+    // output so WordPress creates a revision on every reprocess call (rather
+    // than deduping via wp_save_post_revision_check_for_changes). Also serves
+    // as a provenance audit trail visible in the Gutenberg HTML block editor.
+    $built_at = ( new DateTime( 'now', new DateTimeZone( 'UTC' ) ) )
+        ->format( 'Y-m-d\TH:i:s.u\Z' );
+
+    return "<!-- wp:html -->\n<!-- built: {$built_at} -->\n" . $wrapped . "\n<!-- /wp:html -->";
 }
 
 /**

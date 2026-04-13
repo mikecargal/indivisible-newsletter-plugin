@@ -72,21 +72,33 @@ class Test_IN_Reprocess extends IN_Test_Case {
         $post_id = $this->factory->post->create();
         update_post_meta( $post_id, '_in_newsletter_raw_body', $raw );
 
-        indivisible_newsletter_reprocess_post( $post_id );
-        $first = get_post( $post_id )->post_content;
+        $revisions_before = count( wp_get_post_revisions( $post_id ) );
 
         indivisible_newsletter_reprocess_post( $post_id );
-        $second = get_post( $post_id )->post_content;
+        $revisions_after_first = count( wp_get_post_revisions( $post_id ) );
 
-        $this->assertSame(
-            $first,
-            $second,
-            'Two reprocess calls should produce identical post_content'
-        );
+        indivisible_newsletter_reprocess_post( $post_id );
+        $revisions_after_second = count( wp_get_post_revisions( $post_id ) );
+
+        // The raw body meta must never change across reprocess calls.
         $this->assertSame(
             $raw,
             get_post_meta( $post_id, '_in_newsletter_raw_body', true ),
             'Raw body meta should never change after reprocess'
+        );
+
+        // Every reprocess call must produce a new revision, catching any future
+        // optimization that short-circuits wp_update_post on no-op content. The
+        // built-timestamp HTML comment in build_post_content guarantees content
+        // bytes differ on every call, which prevents WP core's revision deduper
+        // from hiding a short-circuit: if the second call didn't actually run
+        // wp_update_post, delta_second would be 0 while delta_first was non-zero.
+        $delta_first  = $revisions_after_first - $revisions_before;
+        $delta_second = $revisions_after_second - $revisions_after_first;
+        $this->assertSame(
+            $delta_first,
+            $delta_second,
+            'Each reprocess call should create the same number of revisions'
         );
     }
 
