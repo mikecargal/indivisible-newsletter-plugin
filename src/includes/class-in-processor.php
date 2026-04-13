@@ -255,14 +255,22 @@ function indivisible_newsletter_build_post_content( string $raw_html ): string {
     $cleaned = wp_kses_post( $cleaned );
     $wrapped = '<div class="in-newsletter-content">' . $cleaned . '</div>';
 
-    // Unique ISO-8601 UTC timestamp (microsecond precision) injected as an
-    // HTML comment between the Gutenberg block marker and the content wrapper.
-    // Invisible when rendered; guarantees each build produces byte-distinct
-    // output so WordPress creates a revision on every reprocess call (rather
-    // than deduping via wp_save_post_revision_check_for_changes). Also serves
-    // as a provenance audit trail visible in the Gutenberg HTML block editor.
+    // Unique timestamp injected as an HTML comment between the Gutenberg block
+    // marker and the content wrapper. Invisible when rendered; guarantees each
+    // build produces byte-distinct output so WordPress creates a revision on
+    // every reprocess call (rather than deduping via
+    // wp_save_post_revision_check_for_changes). Also serves as a provenance
+    // audit trail visible in the Gutenberg HTML block editor.
+    //
+    // The ISO-8601 UTC portion is for humans (shows when the post was last
+    // built); the hrtime suffix is appended because PHP's DateTime('now') has
+    // been observed to return the same microsecond value on ~50% of consecutive
+    // calls in the Docker test environment. hrtime(true) is a monotonic
+    // nanosecond wall clock that always advances between calls, guaranteeing
+    // byte-uniqueness for the revision-creation invariant.
     $built_at = ( new DateTime( 'now', new DateTimeZone( 'UTC' ) ) )
         ->format( 'Y-m-d\TH:i:s.u\Z' );
+    $built_at .= '-' . hrtime( true );
 
     return "<!-- wp:html -->\n<!-- built: {$built_at} -->\n" . $wrapped . "\n<!-- /wp:html -->";
 }

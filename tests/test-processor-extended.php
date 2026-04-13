@@ -773,9 +773,9 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
     // Gutenberg block-open marker and the .in-newsletter-content div so that
     // consecutive builds produce byte-distinct output (see test_reprocess_is_idempotent).
     $this->assertMatchesRegularExpression(
-      '/<!-- built: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z -->/',
+      '/<!-- built: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z-\d+ -->/',
       $first,
-      'Helper output must contain a <!-- built: ISO8601 --> comment'
+      'Helper output must contain a <!-- built: ISO8601-hrtime --> comment'
     );
     $this->assertNotSame(
       $first,
