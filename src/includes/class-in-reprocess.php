@@ -142,3 +142,47 @@ function indivisible_newsletter_render_recent_newsletters_section(): string {
     <?php
     return (string) ob_get_clean();
 }
+
+/**
+ * Handle a Reprocess form submission from the settings page.
+ *
+ * Returns an admin notice HTML string (success or error) that the caller
+ * can echo at the top of the settings page. Returns empty string when the
+ * form was not submitted or the nonce is missing/invalid.
+ *
+ * @return string Admin notice HTML, or '' if no action was performed.
+ */
+function indivisible_newsletter_handle_reprocess_action(): string {
+    if ( ! isset( $_POST['in_reprocess'] ) || ! isset( $_POST['in_reprocess_post_id'] ) ) {
+        return '';
+    }
+
+    // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized via absint()
+    $post_id = absint( $_POST['in_reprocess_post_id'] );
+    if ( 0 === $post_id ) {
+        return '';
+    }
+
+    // check_admin_referer dies on failure by default; use wp_verify_nonce
+    // so the test harness can assert "no action taken" without triggering wp_die.
+    $nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
+    if ( ! wp_verify_nonce( $nonce, 'in_reprocess_action_' . $post_id ) ) {
+        return '';
+    }
+
+    $result = indivisible_newsletter_reprocess_post( $post_id );
+
+    if ( is_wp_error( $result ) ) {
+        return '<div class="notice notice-error"><p>' . esc_html( $result->get_error_message() ) . '</p></div>';
+    }
+
+    $post      = get_post( $post_id );
+    $title     = $post ? $post->post_title : '(unknown)';
+    $permalink = $post ? get_permalink( $post_id ) : '#';
+
+    return sprintf(
+        '<div class="notice notice-success"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank">view post</a></p></div>',
+        esc_html( $title ),
+        esc_url( $permalink )
+    );
+}

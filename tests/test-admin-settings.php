@@ -505,4 +505,45 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
       'Nonce value must validate for the action in_reprocess_action_' . $post_id
     );
   }
+
+  public function test_reprocess_action_handler_rejects_missing_nonce(): void {
+    wp_set_current_user( $this->factory->user->create( array( 'role' => 'administrator' ) ) );
+    $post_id = $this->factory->post->create( array( 'post_content' => 'ORIGINAL' ) );
+    update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    // No nonce in $_POST.
+    $_POST = array(
+      'in_reprocess'         => '1',
+      'in_reprocess_post_id' => (string) $post_id,
+    );
+
+    $notice = indivisible_newsletter_handle_reprocess_action();
+
+    $this->assertSame( '', $notice, 'Handler should return empty string when nonce is missing' );
+    $this->assertSame( 'ORIGINAL', get_post( $post_id )->post_content, 'Post content must not change without valid nonce' );
+
+    $_POST = array();
+  }
+
+  public function test_reprocess_action_handler_returns_success_notice_on_valid_request(): void {
+    wp_set_current_user( $this->factory->user->create( array( 'role' => 'administrator' ) ) );
+    $post_id = $this->factory->post->create( array( 'post_title' => 'Newsletter XYZ' ) );
+    update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $_POST = array(
+      'in_reprocess'         => '1',
+      'in_reprocess_post_id' => (string) $post_id,
+      '_wpnonce'             => wp_create_nonce( 'in_reprocess_action_' . $post_id ),
+    );
+    $_REQUEST = $_POST;
+
+    $notice = indivisible_newsletter_handle_reprocess_action();
+
+    $this->assertHtml( $notice )->find( 'div.notice-success' )->exists();
+    $this->assertHtml( $notice )->find( 'div.notice-success' )->containsText( 'Newsletter XYZ' );
+    $this->assertHtml( $notice )->find( 'div.notice-success a' )->exists();
+
+    $_POST    = array();
+    $_REQUEST = array();
+  }
 }
