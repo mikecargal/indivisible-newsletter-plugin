@@ -491,6 +491,24 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
       ->find( 'table.in-recent-newsletters input[name="in_reprocess_post_id"]' )
       ->hasAttribute( 'value', (string) $post_id );
 
+    // Recent Newsletters h2 must be a fragment target so the reprocess form
+    // action can scroll back to it after a POST.
+    $this->assertHtml( $html )
+      ->find( 'h2#in-recent-newsletters-anchor' )
+      ->exists();
+
+    // The reprocess form's action attribute must include the fragment anchor
+    // so that after a POST the browser scrolls back to the Recent Newsletters
+    // section instead of resetting to scrollY=0. The form's action must
+    // contain #in-recent-newsletters-anchor; the URL portion before the
+    // fragment is constructed via admin_url and varies by install, so we
+    // assert the fragment substring rather than the full action value.
+    $this->assertMatchesRegularExpression(
+      '/<form[^>]*action="[^"]*#in-recent-newsletters-anchor"/',
+      $html,
+      'Reprocess form action must include the #in-recent-newsletters-anchor fragment'
+    );
+
     // Extract the nonce value and verify it validates for the per-post action string.
     // A weaker test would only check that *some* nonce field is present; this confirms
     // the nonce was minted for the correct action (in_reprocess_action_<post_id>).

@@ -111,7 +111,7 @@ function indivisible_newsletter_render_recent_newsletters_section(
     ob_start();
     ?>
     <hr />
-    <h2>Recent Newsletters</h2>
+    <h2 id="in-recent-newsletters-anchor">Recent Newsletters</h2>
     <?php if ( $reprocessed_post_id && '' !== $reprocessed_notice_html ) : ?>
         <div class="in-recent-newsletters-notice">
             <?php echo $reprocessed_notice_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside handler ?>
@@ -149,7 +149,7 @@ function indivisible_newsletter_render_recent_newsletters_section(
                         <td><?php echo esc_html( $sub_display ); ?></td>
                         <td>
                             <a href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>" target="_blank" rel="noopener" class="button button-small">View</a>
-                            <form method="post" style="display:inline">
+                            <form method="post" action="<?php echo esc_url( admin_url( 'options-general.php?page=indivisible-newsletter' ) ); ?>#in-recent-newsletters-anchor" style="display:inline">
                                 <?php wp_nonce_field( 'in_reprocess_action_' . $post->ID ); ?>
                                 <input type="hidden" name="in_reprocess_post_id" value="<?php echo esc_attr( $post->ID ); ?>">
                                 <button type="submit" name="in_reprocess" class="button button-small"
