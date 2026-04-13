@@ -129,4 +129,30 @@ class Test_IN_Reprocess extends IN_Test_Case {
             'wp_update_post should create a revision so the pre-reprocess content is recoverable'
         );
     }
+
+    public function test_recent_newsletters_table_truncates_raw_subject_by_characters_not_bytes(): void {
+        wp_set_current_user( $this->factory->user->create( array( 'role' => 'administrator' ) ) );
+
+        // 59 ASCII 'a' followed by a single emoji (4 bytes) followed by 'TAIL'. Total:
+        // 67 bytes, 64 characters. Byte-based substr(0, 60) stops 1 byte into the emoji,
+        // corrupting the codepoint. Character-based mb_substr(0, 60) stops AFTER the emoji,
+        // preserving it intact.
+        $subject = str_repeat( 'a', 59 ) . '🎉TAIL';
+
+        $post_id = $this->factory->post->create( array(
+            'post_title' => 'Emoji Subject Test',
+            'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+        ) );
+        update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
+        update_post_meta( $post_id, '_in_newsletter_raw_subject', $subject );
+
+        $html = indivisible_newsletter_render_recent_newsletters_section();
+
+        // assertHtml-ok: asserting a specific UTF-8 codepoint survives truncation, not DOM structure.
+        $this->assertStringContainsString(
+            '🎉',
+            $html,
+            'Raw subject truncation must be character-based; byte-based truncation cuts mid-codepoint'
+        );
+    }
 }

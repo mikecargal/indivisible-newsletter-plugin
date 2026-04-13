@@ -490,5 +490,19 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $this->assertHtml( $html )
       ->find( 'table.in-recent-newsletters input[name="in_reprocess_post_id"]' )
       ->hasAttribute( 'value', (string) $post_id );
+
+    // Extract the nonce value and verify it validates for the per-post action string.
+    // A weaker test would only check that *some* nonce field is present; this confirms
+    // the nonce was minted for the correct action (in_reprocess_action_<post_id>).
+    $this->assertMatchesRegularExpression(
+      '/name="_wpnonce" value="([a-f0-9]+)"/',
+      $html,
+      'Nonce input must be present with a hex value'
+    );
+    preg_match( '/name="_wpnonce" value="([a-f0-9]+)"/', $html, $nonce_match );
+    $this->assertNotFalse(
+      wp_verify_nonce( $nonce_match[1], 'in_reprocess_action_' . $post_id ),
+      'Nonce value must validate for the action in_reprocess_action_' . $post_id
+    );
   }
 }
