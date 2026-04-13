@@ -160,11 +160,8 @@ class Test_IN_Reprocess extends IN_Test_Case {
 
         $html = indivisible_newsletter_render_recent_newsletters_section();
 
-        // assertHtml-ok: asserting a specific UTF-8 codepoint survives truncation, not DOM structure.
-        $this->assertStringContainsString(
-            '🎉',
-            $html,
-            'Raw subject truncation must be character-based; byte-based truncation cuts mid-codepoint'
-        );
+        $this->assertHtml( $html )
+            ->find( 'table.in-recent-newsletters td' )
+            ->containsText( '🎉' );
     }
 }
