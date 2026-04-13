@@ -18,5 +18,29 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @return true|WP_Error True on success, WP_Error on failure.
  */
 function indivisible_newsletter_reprocess_post( int $post_id ) {
-    return new WP_Error( 'not_implemented', 'Reprocess not yet implemented.' );
+    $post = get_post( $post_id );
+    if ( null === $post ) {
+        return new WP_Error(
+            'reprocess_not_found',
+            sprintf( 'Post %d does not exist.', $post_id )
+        );
+    }
+
+    if ( ! current_user_can( 'manage_options' ) ) {
+        return new WP_Error(
+            'reprocess_forbidden',
+            'You do not have permission to reprocess newsletters.'
+        );
+    }
+
+    $raw_body = get_post_meta( $post_id, '_in_newsletter_raw_body', true );
+    if ( empty( $raw_body ) ) {
+        return new WP_Error(
+            'reprocess_no_raw_body',
+            "This post doesn't have the original email stored. Only newsletters created after the reprocess feature shipped can be reprocessed."
+        );
+    }
+
+    // Happy path implemented in Task 6.
+    return new WP_Error( 'not_implemented', 'Reprocess happy path not yet implemented.' );
 }
