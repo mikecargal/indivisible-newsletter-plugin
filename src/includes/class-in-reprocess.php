@@ -37,7 +37,7 @@ function indivisible_newsletter_reprocess_post( int $post_id ) {
     if ( empty( $raw_body ) ) {
         return new WP_Error(
             'reprocess_no_raw_body',
-            "This post doesn't have the original email stored. Only newsletters created after the reprocess feature shipped can be reprocessed."
+            'This post doesn\'t have the original email stored. Only newsletters created after the reprocess feature shipped can be reprocessed.'
         );
     }
 
