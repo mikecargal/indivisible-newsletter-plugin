@@ -115,6 +115,12 @@ function indivisible_newsletter_create_post_from_email($email) {
     // the current cleaner against it without re-fetching from IMAP.
     update_post_meta( $post_id, '_in_newsletter_raw_body', $raw_body );
 
+    // Store the source email's Message-ID so the reprocess feature UI can
+    // display it and so it can be cross-referenced against the processed-IDs option.
+    if ( ! empty( $email['message_id'] ) ) {
+        update_post_meta( $post_id, '_in_newsletter_message_id', $email['message_id'] );
+    }
+
     // Send notification email.
     indivisible_newsletter_notify_webmaster($post_id, $title, $settings);
 

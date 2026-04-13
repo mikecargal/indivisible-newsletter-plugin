@@ -709,4 +709,23 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
         'Post meta _in_newsletter_raw_body should equal the pre-clean HTML'
     );
   }
+
+  public function test_create_post_stores_message_id_meta(): void {
+    $email = array(
+        'subject'    => 'Test Newsletter',
+        'html'       => '<p>Body</p>',
+        'date'       => '2026-04-12',
+        'message_id' => '<abc123@example.com>',
+    );
+
+    $post_id = indivisible_newsletter_create_post_from_email( $email );
+
+    $this->assertIsInt( $post_id );
+    $stored = get_post_meta( $post_id, '_in_newsletter_message_id', true );
+    $this->assertSame(
+        '<abc123@example.com>',
+        $stored,
+        'Post meta _in_newsletter_message_id should equal $email["message_id"]'
+    );
+  }
 }
