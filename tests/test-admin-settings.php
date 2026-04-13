@@ -421,4 +421,74 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $this->assertHtml( $output )->find( 'input[name="option_page"][value="indivisible_newsletter_group"]' )->exists();
   }
+
+  // --- Recent Newsletters table ---
+
+  public function test_recent_newsletters_table_shows_posts_with_raw_body_meta(): void {
+    $with_meta = $this->factory->post->create( array(
+      'post_title' => 'Meta Newsletter',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+    ) );
+    update_post_meta( $with_meta, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $without_meta = $this->factory->post->create( array(
+      'post_title' => 'Plain Post',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+    ) );
+
+    $html = indivisible_newsletter_render_recent_newsletters_section();
+
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters tbody tr' )
+      ->count( 1 );
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters' )
+      ->containsText( 'Meta Newsletter' );
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters' )
+      ->doesNotContainText( 'Plain Post' );
+  }
+
+  public function test_recent_newsletters_table_limits_to_90_days(): void {
+    $recent = $this->factory->post->create( array(
+      'post_title' => 'Recent Newsletter',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-10 days' ) ),
+    ) );
+    update_post_meta( $recent, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $old = $this->factory->post->create( array(
+      'post_title' => 'Old Newsletter',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-100 days' ) ),
+    ) );
+    update_post_meta( $old, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $html = indivisible_newsletter_render_recent_newsletters_section();
+
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters' )
+      ->containsText( 'Recent Newsletter' );
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters' )
+      ->doesNotContainText( 'Old Newsletter' );
+  }
+
+  public function test_recent_newsletters_table_includes_reprocess_button_with_nonce(): void {
+    $post_id = $this->factory->post->create( array(
+      'post_title' => 'Test',
+      'post_date'  => gmdate( 'Y-m-d H:i:s', strtotime( '-1 day' ) ),
+    ) );
+    update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
+
+    $html = indivisible_newsletter_render_recent_newsletters_section();
+
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters button[name="in_reprocess"]' )
+      ->exists();
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters input[name="_wpnonce"]' )
+      ->exists();
+    $this->assertHtml( $html )
+      ->find( 'table.in-recent-newsletters input[name="in_reprocess_post_id"]' )
+      ->hasAttribute( 'value', (string) $post_id );
+  }
 }

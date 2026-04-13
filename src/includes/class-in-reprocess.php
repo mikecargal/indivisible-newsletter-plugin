@@ -62,3 +62,83 @@ function indivisible_newsletter_reprocess_post( int $post_id ) {
 
     return true;
 }
+
+/**
+ * Render the "Recent Newsletters" section of the settings page as an HTML
+ * string. Returns the markup so callers can echo it or pass it to tests.
+ *
+ * Lists newsletter-origin posts from the last 90 days that have the
+ * _in_newsletter_raw_body meta. Each row offers View and Reprocess buttons.
+ *
+ * @return string HTML markup.
+ */
+function indivisible_newsletter_render_recent_newsletters_section(): string {
+    $posts = get_posts( array(
+        'post_type'      => 'post',
+        'post_status'    => 'any',
+        'posts_per_page' => 50,
+        'date_query'     => array(
+            array(
+                'column' => 'post_date',
+                'after'  => '90 days ago',
+            ),
+        ),
+        'meta_key'       => '_in_newsletter_raw_body',
+        'meta_compare'   => 'EXISTS',
+        'orderby'        => 'date',
+        'order'          => 'DESC',
+    ) );
+
+    ob_start();
+    ?>
+    <hr />
+    <h2>Recent Newsletters</h2>
+    <?php if ( empty( $posts ) ) : ?>
+        <p class="description">No newsletter posts from the last 90 days. Posts created before the reprocess feature shipped are not shown.</p>
+    <?php else : ?>
+        <table class="widefat striped in-recent-newsletters">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Date</th>
+                    <th>Message-ID</th>
+                    <th>Raw Subject</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $posts as $post ) : ?>
+                    <?php
+                    $message_id  = (string) get_post_meta( $post->ID, '_in_newsletter_message_id', true );
+                    $raw_subject = (string) get_post_meta( $post->ID, '_in_newsletter_raw_subject', true );
+                    $mid_display = strlen( $message_id ) > 40 ? substr( $message_id, 0, 40 ) . '…' : $message_id;
+                    $sub_display = strlen( $raw_subject ) > 60 ? substr( $raw_subject, 0, 60 ) . '…' : $raw_subject;
+                    ?>
+                    <tr>
+                        <td>
+                            <a href="<?php echo esc_url( get_edit_post_link( $post->ID ) ); ?>">
+                                <?php echo esc_html( $post->post_title ); ?>
+                            </a>
+                        </td>
+                        <td><?php echo esc_html( get_the_date( 'Y-m-d', $post ) ); ?></td>
+                        <td><code><?php echo esc_html( $mid_display ); ?></code></td>
+                        <td><?php echo esc_html( $sub_display ); ?></td>
+                        <td>
+                            <a href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>" target="_blank" class="button button-small">View</a>
+                            <form method="post" style="display:inline">
+                                <?php wp_nonce_field( 'in_reprocess_action_' . $post->ID ); ?>
+                                <input type="hidden" name="in_reprocess_post_id" value="<?php echo esc_attr( $post->ID ); ?>">
+                                <button type="submit" name="in_reprocess" class="button button-small"
+                                        onclick="return confirm('Reprocessing will replace the current content with a fresh clean of the original email. Any manual edits will be moved to a post revision. Continue?');">
+                                    Reprocess
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    <?php endif; ?>
+    <?php
+    return (string) ob_get_clean();
+}
