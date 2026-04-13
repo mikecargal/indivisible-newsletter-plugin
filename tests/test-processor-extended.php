@@ -783,4 +783,21 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
       'Two calls to build_post_content with the same input must produce different output due to the unique build timestamp'
     );
   }
+
+  public function test_build_post_content_strips_dangerous_html_via_wp_kses_post(): void {
+    $raw = '<p>Safe text</p><script>alert("xss")</script><p>More safe text</p>';
+
+    $content = indivisible_newsletter_build_post_content( $raw );
+
+    // wp_kses_post strips <script> tags entirely. The safe text must survive.
+    $this->assertHtml( $content )
+      ->find( 'div.in-newsletter-content' )
+      ->containsText( 'Safe text' );
+    $this->assertHtml( $content )
+      ->find( 'div.in-newsletter-content' )
+      ->containsText( 'More safe text' );
+    $this->assertHtml( $content )
+      ->find( 'div.in-newsletter-content script' )
+      ->doesNotExist();
+  }
 }
