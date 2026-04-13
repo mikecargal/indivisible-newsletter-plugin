@@ -124,7 +124,7 @@ function indivisible_newsletter_render_recent_newsletters_section(): string {
                         <td><code><?php echo esc_html( $mid_display ); ?></code></td>
                         <td><?php echo esc_html( $sub_display ); ?></td>
                         <td>
-                            <a href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>" target="_blank" class="button button-small">View</a>
+                            <a href="<?php echo esc_url( get_permalink( $post->ID ) ); ?>" target="_blank" rel="noopener" class="button button-small">View</a>
                             <form method="post" style="display:inline">
                                 <?php wp_nonce_field( 'in_reprocess_action_' . $post->ID ); ?>
                                 <input type="hidden" name="in_reprocess_post_id" value="<?php echo esc_attr( $post->ID ); ?>">
@@ -153,6 +153,7 @@ function indivisible_newsletter_render_recent_newsletters_section(): string {
  * @return string Admin notice HTML, or '' if no action was performed.
  */
 function indivisible_newsletter_handle_reprocess_action(): string {
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified below
     if ( ! isset( $_POST['in_reprocess'] ) || ! isset( $_POST['in_reprocess_post_id'] ) ) {
         return '';
     }
@@ -181,7 +182,7 @@ function indivisible_newsletter_handle_reprocess_action(): string {
     $permalink = $post ? get_permalink( $post_id ) : '#';
 
     return sprintf(
-        '<div class="notice notice-success"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank">view post</a></p></div>',
+        '<div class="notice notice-success"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank" rel="noopener">view post</a></p></div>',
         esc_html( $title ),
         esc_url( $permalink )
     );

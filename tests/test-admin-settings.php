@@ -546,4 +546,29 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $_POST    = array();
     $_REQUEST = array();
   }
+
+  public function test_reprocess_action_handler_returns_error_notice_when_reprocess_fails(): void {
+    wp_set_current_user( $this->factory->user->create( array( 'role' => 'administrator' ) ) );
+    $post_id = $this->factory->post->create( array( 'post_content' => 'ORIGINAL' ) );
+    // Deliberately do NOT set _in_newsletter_raw_body meta so reprocess_post returns reprocess_no_raw_body.
+
+    $_POST = array(
+      'in_reprocess'         => '1',
+      'in_reprocess_post_id' => (string) $post_id,
+      '_wpnonce'             => wp_create_nonce( 'in_reprocess_action_' . $post_id ),
+    );
+    $_REQUEST = $_POST;
+
+    $notice = indivisible_newsletter_handle_reprocess_action();
+
+    $this->assertHtml( $notice )->find( 'div.notice-error' )->exists();
+    $this->assertSame(
+      'ORIGINAL',
+      get_post( $post_id )->post_content,
+      'Post content must not change when reprocess returns a WP_Error'
+    );
+
+    $_POST    = array();
+    $_REQUEST = array();
+  }
 }
