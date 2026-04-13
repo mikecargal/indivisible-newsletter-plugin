@@ -25,6 +25,7 @@
             <file>./tests/test-processor.php</file>
             <file>./tests/test-sanitization.php</file>
             <file>./tests/test-settings.php</file>
+            <file>./tests/test-reprocess.php</file>
         </testsuite>
     </testsuites>
     <php>

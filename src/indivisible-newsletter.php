@@ -33,6 +33,7 @@ require_once IN_PLUGIN_DIR . 'includes/class-in-admin.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-email.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-processor.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-cron.php';
+require_once IN_PLUGIN_DIR . 'includes/class-in-reprocess.php';
 
 // Frontend CSS for newsletter posts.
 add_action( 'wp_head', 'indivisible_newsletter_frontend_css' );
