@@ -543,9 +543,9 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $this->assertIsArray( $result );
     $this->assertSame( $post_id, $result['post_id'], 'Result post_id should match the reprocessed post' );
-    $this->assertHtml( $result['notice'] )->find( 'div.notice-success' )->exists();
-    $this->assertHtml( $result['notice'] )->find( 'div.notice-success' )->containsText( 'Newsletter XYZ' );
-    $this->assertHtml( $result['notice'] )->find( 'div.notice-success a' )->exists();
+    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-success' )->exists();
+    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-success' )->containsText( 'Newsletter XYZ' );
+    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-success a' )->exists();
 
     $_POST    = array();
     $_REQUEST = array();
@@ -567,7 +567,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $this->assertIsArray( $result );
     $this->assertSame( $post_id, $result['post_id'], 'Result post_id should match the attempted post even on error' );
-    $this->assertHtml( $result['notice'] )->find( 'div.notice-error' )->exists();
+    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-error' )->exists();
     $this->assertSame(
       'ORIGINAL',
       get_post( $post_id )->post_content,
@@ -585,7 +585,7 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     ) );
     update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
 
-    $notice_html = '<div class="notice notice-success"><p>Reprocessed: <strong>Reprocess Target</strong></p></div>';
+    $notice_html = '<div class="in-reprocess-notice-success"><p>Reprocessed: <strong>Reprocess Target</strong></p></div>';
 
     $html = indivisible_newsletter_render_recent_newsletters_section( $post_id, $notice_html );
 
@@ -595,10 +595,10 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
       ->find( 'div.in-recent-newsletters-notice' )
       ->exists();
     $this->assertHtml( $html )
-      ->find( 'div.in-recent-newsletters-notice div.notice-success' )
+      ->find( 'div.in-recent-newsletters-notice div.in-reprocess-notice-success' )
       ->exists();
     $this->assertHtml( $html )
-      ->find( 'div.in-recent-newsletters-notice div.notice-success' )
+      ->find( 'div.in-recent-newsletters-notice div.in-reprocess-notice-success' )
       ->containsText( 'Reprocess Target' );
 
     // The notice wrapper must NOT live inside the table — that was the

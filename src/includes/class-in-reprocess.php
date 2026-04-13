@@ -203,7 +203,7 @@ function indivisible_newsletter_handle_reprocess_action(): array {
     if ( is_wp_error( $result ) ) {
         return array(
             'post_id' => $post_id,
-            'notice'  => '<div class="notice notice-error"><p>' . esc_html( $result->get_error_message() ) . '</p></div>',
+            'notice'  => '<div class="in-reprocess-notice-error" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #d63638;padding:1px 12px;margin:5px 0 15px;"><p>' . esc_html( $result->get_error_message() ) . '</p></div>',
         );
     }
 
@@ -214,7 +214,7 @@ function indivisible_newsletter_handle_reprocess_action(): array {
     return array(
         'post_id' => $post_id,
         'notice'  => sprintf(
-            '<div class="notice notice-success"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank" rel="noopener">view post</a></p></div>',
+            '<div class="in-reprocess-notice-success" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #00a32a;padding:1px 12px;margin:5px 0 15px;"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank" rel="noopener">view post</a></p></div>',
             esc_html( $title ),
             esc_url( $permalink )
         ),
