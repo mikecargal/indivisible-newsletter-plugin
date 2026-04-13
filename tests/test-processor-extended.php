@@ -689,4 +689,24 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
 
     $this->assertEquals( '<p>Unwrapped content</p>', $result );
   }
+
+  public function test_create_post_stores_raw_body_meta(): void {
+    $raw_html = '<table class="nl-container" style="background-color: #0068a5">Content</table>';
+    $email = array(
+        'subject'    => 'Test Newsletter',
+        'html'       => $raw_html,
+        'date'       => '2026-04-12',
+        'message_id' => '<test@example.com>',
+    );
+
+    $post_id = indivisible_newsletter_create_post_from_email( $email );
+
+    $this->assertIsInt( $post_id );
+    $stored_raw = get_post_meta( $post_id, '_in_newsletter_raw_body', true );
+    $this->assertSame(
+        $raw_html,
+        $stored_raw,
+        'Post meta _in_newsletter_raw_body should equal the pre-clean HTML'
+    );
+  }
 }

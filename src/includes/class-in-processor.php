@@ -65,6 +65,9 @@ function indivisible_newsletter_create_post_from_email($email) {
     // Extract the original newsletter content (strips forwarding wrapper if present).
     $html = indivisible_newsletter_extract_forwarded_content($email['html']);
 
+    // Capture the post-extract, pre-clean HTML for the reprocess feature.
+    $raw_body = $html;
+
     // Clean the HTML.
     $html = indivisible_newsletter_clean_html($html);
 
@@ -107,6 +110,10 @@ function indivisible_newsletter_create_post_from_email($email) {
 
     // Mark as login-required (integrates with Login Required Content plugin).
     update_post_meta($post_id, '_login_required', '1');
+
+    // Store the original pre-clean HTML so the reprocess feature can re-run
+    // the current cleaner against it without re-fetching from IMAP.
+    update_post_meta( $post_id, '_in_newsletter_raw_body', $raw_body );
 
     // Send notification email.
     indivisible_newsletter_notify_webmaster($post_id, $title, $settings);
