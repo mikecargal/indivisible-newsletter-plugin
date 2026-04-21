@@ -30,4 +30,4 @@ run_in_container() {
 # PHP tests (parallel via paratest). No JS tests in this plugin.
 echo "Running PHP tests..."
 run_in_container "${PARATEST_PROCS:-10}" \
-    "vendor/bin/paratest --processes ${PARATEST_PROCS:-10} --parallel-suite"
+    "vendor/bin/paratest --processes ${PARATEST_PROCS:-10} --parallel-suite --coverage-clover=.phpunit.cache/test-coverage.xml"
