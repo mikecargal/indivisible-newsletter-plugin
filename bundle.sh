@@ -10,6 +10,7 @@ SRC_DIR="$SCRIPT_DIR/src"
 DIST_DIR="$SCRIPT_DIR/dist"
 PLUGIN_NAME="indivisible-newsletter"
 VERSION=$(grep "Version:" "$SRC_DIR/indivisible-newsletter.php" | awk '{print $3}')
+ZIP_FILE="$DIST_DIR/${PLUGIN_NAME}-${VERSION}.zip"
 
 echo "========================================="
 echo "Bundling $PLUGIN_NAME v$VERSION"
@@ -18,11 +19,15 @@ echo "========================================="
 # Create dist directory if it doesn't exist
 mkdir -p "$DIST_DIR"
 
-# Remove old zip if it exists
-if [ -f "$DIST_DIR/${PLUGIN_NAME}.zip" ]; then
-    echo "Removing old bundle..."
-    rm "$DIST_DIR/${PLUGIN_NAME}.zip"
+# Refuse to overwrite a sealed version (no -dev suffix in version → immutable)
+if [[ "$VERSION" != *-dev ]] && [ -f "$ZIP_FILE" ]; then
+    echo "error: sealed artifact already exists: $ZIP_FILE" >&2
+    echo "       sealed versions are immutable; rebuild from tag if needed" >&2
+    exit 4
 fi
+
+# Remove the old unversioned zip if present (deprecated output)
+rm -f "$DIST_DIR/${PLUGIN_NAME}.zip"
 
 # Create temporary directory for bundling
 TEMP_DIR=$(mktemp -d)
@@ -42,14 +47,19 @@ find "$PLUGIN_DIR" -name "*.bak" -delete
 find "$PLUGIN_DIR" -name "*.tmp" -delete
 find "$PLUGIN_DIR" -name ".gitkeep" -delete
 
-# Create zip file
-echo "Creating zip archive..."
+# Include CHANGELOG.md from the plugin repo root (if present)
+if [ -f "$SCRIPT_DIR/CHANGELOG.md" ]; then
+    cp "$SCRIPT_DIR/CHANGELOG.md" "$PLUGIN_DIR/CHANGELOG.md"
+fi
+
+# Create versioned zip
+echo "Creating versioned zip: $(basename "$ZIP_FILE")"
 cd "$TEMP_DIR"
-zip -r "$DIST_DIR/${PLUGIN_NAME}.zip" "$PLUGIN_NAME" -q
+zip -r "$ZIP_FILE" "$PLUGIN_NAME" -q
 
 # Clean up
 rm -rf "$TEMP_DIR"
 
 echo "========================================="
-echo "Bundle created: $DIST_DIR/${PLUGIN_NAME}.zip"
+echo "Bundle created: $ZIP_FILE"
 echo "========================================="
