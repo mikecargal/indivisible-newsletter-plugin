@@ -168,4 +168,6 @@ cd ../dev_wordpress_claude && ./setup-test-db.sh
 ## Versioning
 
 Releases are sealed via the workspace-level `/seal-version` skill and
-`bump.sh` engine. See `CHANGELOG.md` for the release history.
+`bump.sh` engine. See `CHANGELOG.md` for the release history. Each
+sealed `.zip` bundles its own `CHANGELOG.md` so the deployed plugin
+directory always carries the release history that produced it.
