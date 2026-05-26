@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.8 — 2026-05-26
+
+### Internal
+- Clarified bundled CHANGELOG behavior in README versioning section
+
+
 ## 1.1.7 — 2026-05-26
 
 ### Internal
