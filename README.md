@@ -164,3 +164,8 @@ cd ../dev_wordpress_claude && ./setup-test-db.sh
 - Tested with WordPress 6.x
 - Requires PHP `imap` extension for IMAP connectivity
 - Requires PHP `openssl` extension for credential encryption
+
+## Versioning
+
+Releases are sealed via the workspace-level `/seal-version` skill and
+`bump.sh` engine. See `CHANGELOG.md` for the release history.
