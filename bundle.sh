@@ -50,9 +50,7 @@ find "$PLUGIN_DIR" -name "*.tmp" -delete
 find "$PLUGIN_DIR" -name ".gitkeep" -delete
 
 # Include CHANGELOG.md from the plugin repo root (if present)
-if [ -f "$SCRIPT_DIR/CHANGELOG.md" ]; then
-    cp "$SCRIPT_DIR/CHANGELOG.md" "$PLUGIN_DIR/CHANGELOG.md"
-fi
+ids_copy_changelog "$SCRIPT_DIR" "$PLUGIN_DIR"
 
 # Create versioned zip
 echo "Creating versioned zip: $(basename "$ZIP_FILE")"
