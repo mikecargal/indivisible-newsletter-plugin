@@ -9,7 +9,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="$SCRIPT_DIR/src"
 DIST_DIR="$SCRIPT_DIR/dist"
 PLUGIN_NAME="indivisible-newsletter"
-VERSION=$(grep "Version:" "$SRC_DIR/indivisible-newsletter.php" | awk '{print $3}')
+
+source "$SCRIPT_DIR/../dev_wordpress_claude/copy-sources.sh"
+VERSION=$(ids_extract_version "$SRC_DIR/indivisible-newsletter.php")
 ZIP_FILE="$DIST_DIR/${PLUGIN_NAME}-${VERSION}.zip"
 
 echo "========================================="
