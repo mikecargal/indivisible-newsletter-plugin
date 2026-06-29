@@ -174,36 +174,49 @@ function indivisible_newsletter_render_recent_newsletters_section(
  *   - 'post_id' (int|null): the post that was reprocessed, or null if no
  *     action was taken (no POST data, invalid nonce, or invalid post_id).
  *   - 'notice'  (string):    an admin notice HTML string for the caller to
- *     display inline, or '' when no action was taken. Error notices use the
- *     notice-error class; success notices use notice-success. The renderer
- *     places this inline next to the reprocessed row (see
+ *     display inline, or '' only when no reprocess was submitted. Outcomes use
+ *     the canonical CON6 .ids-alert family: .ids-alert-error for a bad post id
+ *     or a reprocess failure, .ids-alert-success for a completed reprocess. The
+ *     renderer places this inline next to the reprocessed row (see
  *     indivisible_newsletter_render_recent_newsletters_section).
  *
  * @return array{post_id:int|null,notice:string}
  */
 function indivisible_newsletter_handle_reprocess_action(): array {
-    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce verified below
-    if ( ! isset( $_POST['in_reprocess'] ) || ! isset( $_POST['in_reprocess_post_id'] ) ) {
+    // phpcs:ignore WordPress.Security.NonceVerification.Missing -- not a reprocess submission
+    if ( ! isset( $_POST['in_reprocess'] ) ) {
         return array( 'post_id' => null, 'notice' => '' );
     }
 
+    // The Reprocess button posted, so a bad/missing post id is a failure to
+    // surface (A1) — not a silent no-op as before.
     // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- sanitized via absint()
-    $post_id = absint( $_POST['in_reprocess_post_id'] );
+    $post_id = isset( $_POST['in_reprocess_post_id'] ) ? absint( wp_unslash( $_POST['in_reprocess_post_id'] ) ) : 0;
     if ( 0 === $post_id ) {
-        return array( 'post_id' => null, 'notice' => '' );
+        return array(
+            'post_id' => null,
+            'notice'  => ids_render_alert(
+                'error',
+                'Reprocess failed: no valid newsletter post was specified.',
+                array( 'role' => 'alert' )
+            ),
+        );
     }
 
-    $nonce = isset( $_POST['_wpnonce'] ) ? sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ) : '';
-    if ( ! wp_verify_nonce( $nonce, 'in_reprocess_action_' . $post_id ) ) {
-        return array( 'post_id' => null, 'notice' => '' );
-    }
+    // Align nonce-failure handling with the wp_die siblings: Check Now, Test
+    // Connection, and Diagnose all gate on check_admin_referer (A1).
+    check_admin_referer( 'in_reprocess_action_' . $post_id );
 
     $result = indivisible_newsletter_reprocess_post( $post_id );
 
     if ( is_wp_error( $result ) ) {
         return array(
             'post_id' => $post_id,
-            'notice'  => '<div class="in-reprocess-notice-error" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #d63638;padding:1px 12px;margin:5px 0 15px;"><p>' . esc_html( $result->get_error_message() ) . '</p></div>',
+            'notice'  => ids_render_alert(
+                'error',
+                $result->get_error_message(),
+                array( 'role' => 'alert' )
+            ),
         );
     }
 
@@ -211,10 +224,17 @@ function indivisible_newsletter_handle_reprocess_action(): array {
     $title     = $post ? $post->post_title : '(unknown)';
     $permalink = $post ? get_permalink( $post_id ) : '#';
 
+    // Hand-emit the canonical .ids-alert success banner (D1): ids_render_alert()
+    // esc_html()s its message, which would mangle the "view post" anchor, so the
+    // banner is built here with the same .ids-alert markup, escaping each
+    // dynamic value at the boundary.
     return array(
         'post_id' => $post_id,
         'notice'  => sprintf(
-            '<div class="in-reprocess-notice-success" style="background:#fff;border:1px solid #c3c4c7;border-left:4px solid #00a32a;padding:1px 12px;margin:5px 0 15px;"><p>Reprocessed: <strong>%s</strong> — <a href="%s" target="_blank" rel="noopener">view post</a></p></div>',
+            '<div class="ids-alert ids-alert-success" role="status">'
+            . '<span class="ids-alert-icon" aria-hidden="true"></span>'
+            . '<div class="ids-alert-body">Reprocessed: <strong>%s</strong> &mdash; <a href="%s" target="_blank" rel="noopener">view post</a></div>'
+            . '</div>',
             esc_html( $title ),
             esc_url( $permalink )
         ),

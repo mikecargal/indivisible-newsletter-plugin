@@ -529,20 +529,26 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
     $post_id = $this->factory->post->create( array( 'post_content' => 'ORIGINAL' ) );
     update_post_meta( $post_id, '_in_newsletter_raw_body', '<p>Body</p>' );
 
-    // No nonce in $_POST.
+    // No nonce in $_POST. CON10 A1: a missing/invalid nonce now wp_die()s
+    // (aligned with the check_admin_referer siblings) instead of returning a
+    // silent empty notice.
     $_POST = array(
       'in_reprocess'         => '1',
       'in_reprocess_post_id' => (string) $post_id,
     );
+    $_REQUEST = $_POST;
 
-    $result = indivisible_newsletter_handle_reprocess_action();
+    try {
+      indivisible_newsletter_handle_reprocess_action();
+      $this->fail( 'Handler must wp_die() on a missing/invalid reprocess nonce.' );
+    } catch ( WPDieException $e ) {
+      // Expected — nonce failure halts like the Check Now / Test Connection / Diagnose siblings.
+    }
 
-    $this->assertIsArray( $result, 'Handler should return an array' );
-    $this->assertSame( '', $result['notice'], 'Handler should return empty notice when nonce is missing' );
-    $this->assertNull( $result['post_id'], 'Handler should return null post_id when no action was taken' );
-    $this->assertSame( 'ORIGINAL', get_post( $post_id )->post_content, 'Post content must not change without valid nonce' );
+    $this->assertSame( 'ORIGINAL', get_post( $post_id )->post_content, 'Post content must not change without a valid nonce' );
 
-    $_POST = array();
+    $_POST    = array();
+    $_REQUEST = array();
   }
 
   public function test_reprocess_action_handler_returns_success_notice_on_valid_request(): void {
@@ -561,9 +567,10 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $this->assertIsArray( $result );
     $this->assertSame( $post_id, $result['post_id'], 'Result post_id should match the reprocessed post' );
-    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-success' )->exists();
-    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-success' )->containsText( 'Newsletter XYZ' );
-    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-success a' )->exists();
+    // CON10 D1: the success notice is now a canonical .ids-alert-success banner.
+    $this->assertHtml( $result['notice'] )->find( '.ids-alert.ids-alert-success' )->exists();
+    $this->assertHtml( $result['notice'] )->find( '.ids-alert-success .ids-alert-body' )->containsText( 'Newsletter XYZ' );
+    $this->assertHtml( $result['notice'] )->find( '.ids-alert-success .ids-alert-body a' )->exists();
 
     $_POST    = array();
     $_REQUEST = array();
@@ -585,7 +592,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     $this->assertIsArray( $result );
     $this->assertSame( $post_id, $result['post_id'], 'Result post_id should match the attempted post even on error' );
-    $this->assertHtml( $result['notice'] )->find( 'div.in-reprocess-notice-error' )->exists();
+    // CON10 D1: the failure notice is now a canonical .ids-alert-error banner.
+    $this->assertHtml( $result['notice'] )->find( '.ids-alert.ids-alert-error' )->exists();
     $this->assertSame(
       'ORIGINAL',
       get_post( $post_id )->post_content,
