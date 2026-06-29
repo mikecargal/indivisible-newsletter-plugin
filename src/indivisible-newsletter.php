@@ -17,6 +17,12 @@ define('IN_OPTION_KEY', 'indivisible_newsletter_settings');
 define('IN_PROCESSED_KEY', 'indivisible_newsletter_processed_ids');
 define('IN_CRON_HOOK', 'indivisible_newsletter_check_email');
 
+// Minimum Indivisible Shared Design System version. CON10 migrates the admin
+// feedback onto the CON6 .ids-alert family (ids_render_alert, .ids-alert CSS,
+// ids-confirm-modal), which landed in the shared 3.3.0 line (commit "CON6 Step
+// 20"); the -dev floor matches the in-rollout dev build and any future release.
+define('IN_REQUIRED_IDS_VERSION', '3.3.0-dev');
+
 /**
  * Log a message to the PHP error log, suppressed during tests.
  *
@@ -34,6 +40,58 @@ require_once IN_PLUGIN_DIR . 'includes/class-in-email.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-processor.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-cron.php';
 require_once IN_PLUGIN_DIR . 'includes/class-in-reprocess.php';
+
+/**
+ * Whether a design-system version satisfies the required floor.
+ *
+ * Pure so the gate is unit-testable without un-defining the live IDS_VERSION
+ * constant. A null current (design system absent) never satisfies.
+ *
+ * @param string|null $current  The active IDS_VERSION, or null if absent.
+ * @param string      $required The minimum required version.
+ * @return bool True when $current is present and >= $required.
+ */
+function indivisible_newsletter_ids_version_satisfied( ?string $current, string $required ): bool {
+    return null !== $current && version_compare( $current, $required, '>=' );
+}
+
+/**
+ * Guard the Indivisible Shared Design System dependency.
+ *
+ * CON10 renders all admin feedback through the CON6 .ids-alert family, which
+ * the shared mu-plugin provides. If it is missing or too old, the banners and
+ * IDS.confirmModal silently break — so surface an admin notice instead.
+ * Mirrors IEC's iec_check_design_system_dependency.
+ *
+ * @return bool True when the dependency is satisfied.
+ */
+function indivisible_newsletter_check_design_system(): bool {
+    $current = defined( 'IDS_VERSION' ) ? IDS_VERSION : null;
+    if ( ! indivisible_newsletter_ids_version_satisfied( $current, IN_REQUIRED_IDS_VERSION ) ) {
+        add_action( 'admin_notices', 'indivisible_newsletter_design_system_notice' );
+        return false;
+    }
+    return true;
+}
+add_action( 'admin_init', 'indivisible_newsletter_check_design_system' );
+
+/**
+ * Admin notice: the shared design system is missing or too old.
+ */
+function indivisible_newsletter_design_system_notice() {
+    $current = defined( 'IDS_VERSION' ) ? IDS_VERSION : null;
+    $message = null === $current
+        ? sprintf(
+            'Indivisible Newsletter Poster requires the Indivisible Shared Design System mu-plugin (v%s or later). Please activate it.',
+            IN_REQUIRED_IDS_VERSION
+        )
+        : sprintf(
+            'Indivisible Newsletter Poster requires Indivisible Shared Design System v%s or later (found v%s). Please update.',
+            IN_REQUIRED_IDS_VERSION,
+            $current
+        );
+    printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $message ) );
+}
 
 // Frontend CSS for newsletter posts.
 add_action( 'wp_head', 'indivisible_newsletter_frontend_css' );

@@ -14,9 +14,15 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 require_once $_tests_dir . '/includes/functions.php';
 
 /**
- * Load the plugin during test bootstrap.
+ * Load the shared design-system mu-plugin (provides IDS_VERSION, ids_render_alert,
+ * and the ids-confirm-modal script registration that CON10 depends on), then load
+ * the newsletter plugin. Mirrors the event-calendar (CON7) test bootstrap.
  */
 function _manually_load_plugin() {
+  $shared_plugin = '/var/www/plugins/indivisible-shared/src/indivisible-shared.php';
+  if ( ! defined( 'IDS_VERSION' ) && file_exists( $shared_plugin ) ) {
+    require_once $shared_plugin;
+  }
   require dirname( __DIR__ ) . '/src/indivisible-newsletter.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
