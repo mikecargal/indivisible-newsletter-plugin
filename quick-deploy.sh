@@ -22,4 +22,10 @@ cp -r "$SRC_DIR"/* "$DEST_DIR/"
 ids_copy_changelog "$SCRIPT_DIR" "$DEST_DIR"
 
 echo "✅ Deployed to WordPress!"
-echo "🌐 Test at: http://localhost:8000"
+# Report the canonical URL WordPress actually uses — NOT localhost, and with no
+# :port. The Docker port mapping answers on localhost:8000, but WP_HOME is the
+# .local host, so localhost (or any :port) serves broken absolute URLs. Derived
+# live from WP so it stays accurate and never carries a port; falls back if the
+# container is down/renamed.
+SITE_URL="$(docker exec wp_dev wp option get home --allow-root 2>/dev/null)"
+echo "🌐 Test at: ${SITE_URL:-https://mikes-mac-studio.local}"
