@@ -1,12 +1,13 @@
 <?php
 /**
- * CON10 C1 — saving settings reports rejected/coerced values via .ids-alert
- * validation feedback instead of an unconditional "Settings saved."
+ * CON10 C1 — saving settings reports each rejected/coerced value instead of an
+ * unconditional "Settings saved."
  *
  * The sanitizer keeps coercing bad input (unchanged — covered by
- * test-sanitization.php) but now also records a settings error per
- * rejected/coerced value; a dedicated renderer turns the queued settings
- * errors into canonical .ids-alert banners.
+ * test-sanitization.php) and records a settings error per rejected/coerced
+ * value via add_settings_error(); WordPress's native dismissible
+ * settings_errors() notices surface them on the settings page. (An earlier
+ * parallel .ids-alert renderer was dropped — it duplicated WP's own notice.)
  *
  * @package Indivisible_Newsletter
  */
@@ -26,10 +27,6 @@ class Test_Settings_Validation_Feedback extends IN_Test_Case {
 		delete_transient( 'settings_errors' );
 		delete_option( IN_OPTION_KEY );
 		parent::tearDown();
-	}
-
-	private function error_codes(): array {
-		return wp_list_pluck( get_settings_errors( IN_OPTION_KEY ), 'type', 'code' );
 	}
 
 	// --- sanitizer records validation feedback (without changing coercion) ---
@@ -74,31 +71,11 @@ class Test_Settings_Validation_Feedback extends IN_Test_Case {
 			'qualified_senders' => "a@example.com\nb@example.com",
 		) );
 
-		$errors = get_settings_errors( IN_OPTION_KEY );
-		$types  = wp_list_pluck( $errors, 'type' );
-		$this->assertNotContains( 'error', $types, 'A fully-valid save must not queue any error feedback.' );
-	}
-
-	// --- renderer turns queued settings errors into .ids-alert banners ---
-
-	public function test_render_feedback_emits_ids_alert_error(): void {
-		add_settings_error( IN_OPTION_KEY, 'in_test', 'Invalid encryption "rot13"; kept the saved value.', 'error' );
-
-		$html = indivisible_newsletter_render_settings_feedback();
-
-		$this->assertHtml( $html )->find( '.ids-alert.ids-alert-error' )->exists();
-		$this->assertHtml( $html )->find( '.ids-alert-error .ids-alert-body' )->containsText( 'rot13' );
-	}
-
-	public function test_render_feedback_emits_ids_alert_success(): void {
-		add_settings_error( IN_OPTION_KEY, 'in_saved', 'Settings saved.', 'success' );
-
-		$html = indivisible_newsletter_render_settings_feedback();
-
-		$this->assertHtml( $html )->find( '.ids-alert.ids-alert-success' )->exists();
-	}
-
-	public function test_render_feedback_empty_when_nothing_queued(): void {
-		$this->assertSame( '', indivisible_newsletter_render_settings_feedback() );
+		// A fully-valid save queues no error feedback for this option group; WP
+		// then shows its own default "Settings saved." dismissible notice.
+		$this->assertEmpty(
+			get_settings_errors( IN_OPTION_KEY ),
+			'A fully-valid save must not queue any newsletter settings feedback.'
+		);
 	}
 }

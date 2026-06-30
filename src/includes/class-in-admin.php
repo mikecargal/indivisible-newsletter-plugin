@@ -115,15 +115,14 @@ function indivisible_newsletter_register_settings() {
  * Sanitize settings before saving.
  *
  * Coercion behaviour is unchanged (bad values fall back to defaults / are
- * dropped); CON10 C1 additionally records a settings error per rejected value
- * so the save reports what was changed via .ids-alert validation feedback
- * instead of an unconditional "Settings saved." (see
- * indivisible_newsletter_render_settings_feedback).
+ * dropped); CON10 C1 additionally records a settings error per rejected/coerced
+ * value via add_settings_error(), so WordPress's native dismissible
+ * settings_errors() notices report what was changed instead of an unconditional
+ * "Settings saved."
  */
 function indivisible_newsletter_sanitize_settings($input) {
     $current  = indivisible_newsletter_get_settings();
     $defaults = indivisible_newsletter_get_defaults();
-    $rejected = 0;
 
     $sanitized = array();
     $sanitized['imap_host']       = sanitize_text_field($input['imap_host'] ?? $defaults['imap_host']);
@@ -131,7 +130,6 @@ function indivisible_newsletter_sanitize_settings($input) {
 
     if (isset($input['imap_encryption']) && !in_array($input['imap_encryption'], array('ssl', 'tls', 'none'), true)) {
         add_settings_error(IN_OPTION_KEY, 'in_encryption', sprintf('Invalid encryption "%s"; kept "%s".', sanitize_text_field($input['imap_encryption']), $defaults['imap_encryption']), 'error');
-        $rejected++;
     }
     $sanitized['imap_encryption'] = in_array($input['imap_encryption'] ?? '', array('ssl', 'tls', 'none'), true) ? $input['imap_encryption'] : $defaults['imap_encryption'];
 
@@ -146,7 +144,6 @@ function indivisible_newsletter_sanitize_settings($input) {
     $dropped     = count($lines) - count($valid);
     if ($dropped > 0) {
         add_settings_error(IN_OPTION_KEY, 'in_senders', sprintf('%d invalid qualified-sender email(s) were dropped.', $dropped), 'error');
-        $rejected++;
     }
     $sanitized['qualified_senders'] = implode("\n", $valid);
 
@@ -154,7 +151,6 @@ function indivisible_newsletter_sanitize_settings($input) {
 
     if (isset($input['post_status']) && !in_array($input['post_status'], array('draft', 'publish'), true)) {
         add_settings_error(IN_OPTION_KEY, 'in_post_status', sprintf('Invalid post status "%s"; kept "%s".', sanitize_text_field($input['post_status']), $defaults['post_status']), 'error');
-        $rejected++;
     }
     $sanitized['post_status']     = in_array($input['post_status'] ?? '', array('draft', 'publish'), true) ? $input['post_status'] : $defaults['post_status'];
 
@@ -164,7 +160,6 @@ function indivisible_newsletter_sanitize_settings($input) {
     $sanitized['webmaster_email'] = sanitize_email($raw_webmaster);
     if ('' !== trim($raw_webmaster) && '' === $sanitized['webmaster_email']) {
         add_settings_error(IN_OPTION_KEY, 'in_webmaster', sprintf('Invalid webmaster email "%s" was dropped.', sanitize_text_field($raw_webmaster)), 'error');
-        $rejected++;
     }
 
     // Handle password: encrypt if changed, keep existing if blank.
@@ -180,38 +175,12 @@ function indivisible_newsletter_sanitize_settings($input) {
         indivisible_newsletter_schedule_cron($sanitized['check_interval']);
     }
 
-    if (0 === $rejected) {
-        add_settings_error(IN_OPTION_KEY, 'in_saved', 'Settings saved.', 'success');
-    }
-
+    // CON10 C1: rejected/coerced values are surfaced through WordPress's native
+    // dismissible settings_errors() notices (added above). A clean save shows
+    // WP's default "Settings saved." We intentionally do NOT add a custom
+    // success notice or render a parallel .ids-alert here — that produced a
+    // duplicate "Settings saved." banner.
     return $sanitized;
-}
-
-/**
- * Render queued settings validation feedback as canonical CON6 .ids-alert
- * banners. Reads the settings errors recorded by the sanitizer (CON10 C1) —
- * '' when there is nothing to report.
- *
- * @return string Escaped .ids-alert markup.
- */
-function indivisible_newsletter_render_settings_feedback(): string {
-    $errors = get_settings_errors(IN_OPTION_KEY);
-    if (empty($errors)) {
-        return '';
-    }
-    $type_map = array(
-        'error'   => 'error',
-        'success' => 'success',
-        'updated' => 'success',
-        'warning' => 'warning',
-        'info'    => 'info',
-    );
-    $out = '';
-    foreach ($errors as $error) {
-        $type = $type_map[$error['type'] ?? 'info'] ?? 'info';
-        $out .= ids_render_alert($type, $error['message'], array('role' => 'error' === $type ? 'alert' : 'status'));
-    }
-    return $out;
 }
 
 /**
@@ -453,8 +422,8 @@ function indivisible_newsletter_render_settings_page() {
     <div class="wrap">
         <h1>Newsletter Poster Settings</h1>
         <?php
-        // CON10 C1: settings-save validation feedback as .ids-alert banners.
-        echo indivisible_newsletter_render_settings_feedback(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in renderer
+        // CON10 C1 settings-save feedback (success + rejections) renders through
+        // WordPress's native dismissible settings_errors() notices.
         echo $check_now_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above
         echo $test_conn_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in handler
         ?>
