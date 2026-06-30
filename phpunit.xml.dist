@@ -26,6 +26,7 @@
             <file>./tests/test-processor-extended.php</file>
             <file>./tests/test-processor.php</file>
             <file>./tests/test-sanitization.php</file>
+            <file>./tests/test-settings-validation-feedback.php</file>
             <file>./tests/test-settings.php</file>
             <file>./tests/test-reprocess.php</file>
             <file>./tests/test-reprocess-feedback.php</file>
