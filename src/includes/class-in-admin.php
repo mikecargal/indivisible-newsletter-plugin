@@ -293,6 +293,56 @@ function indivisible_newsletter_handle_diagnose_action(): array {
 }
 
 /**
+ * Render the Check Now batch outcome as a canonical CON6 .ids-alert banner.
+ *
+ * @param array|WP_Error $result process_emails() structured result
+ *        {created, failures, notify_failures}, or a WP_Error fetch failure.
+ * @return string Escaped .ids-alert markup.
+ */
+function indivisible_newsletter_check_now_notice( $result ): string {
+    if ( is_wp_error( $result ) ) {
+        return ids_render_alert( 'error', $result->get_error_message(), array( 'role' => 'alert' ) );
+    }
+
+    $created  = (int) ( $result['created'] ?? 0 );
+    $problems = array_merge(
+        $result['failures'] ?? array(),
+        $result['notify_failures'] ?? array()
+    );
+
+    if ( empty( $problems ) ) {
+        if ( 0 === $created ) {
+            return ids_render_alert( 'info', 'No new newsletter emails found.', array( 'role' => 'status' ) );
+        }
+        return ids_render_alert( 'success', sprintf( 'Processed %d newsletter email(s).', $created ), array( 'role' => 'status' ) );
+    }
+
+    $detail = implode( ' ', $problems );
+    if ( 0 === $created ) {
+        return ids_render_alert( 'error', 'Newsletter check failed. ' . $detail, array( 'role' => 'alert' ) );
+    }
+    return ids_render_alert(
+        'warning',
+        sprintf( 'Processed %d newsletter email(s), but some issues occurred: %s', $created, $detail ),
+        array( 'role' => 'alert' )
+    );
+}
+
+/**
+ * Handle the Check Now action.
+ *
+ * @return string A .ids-alert notice, or '' when the action was not submitted.
+ *                wp_die()s on a bad nonce (check_admin_referer).
+ */
+function indivisible_newsletter_handle_check_now_action(): string {
+    if ( ! isset( $_POST['in_check_now'] ) ) {
+        return '';
+    }
+    check_admin_referer( 'in_check_now_action' );
+    return indivisible_newsletter_check_now_notice( indivisible_newsletter_process_emails() );
+}
+
+/**
  * Render the settings page.
  */
 function indivisible_newsletter_render_settings_page() {
@@ -300,16 +350,8 @@ function indivisible_newsletter_render_settings_page() {
         return;
     }
 
-    // Handle "Check Now" action. (CON10 A2 migrates this to a .ids-alert banner.)
-    $check_now_notice = '';
-    if (isset($_POST['in_check_now']) && check_admin_referer('in_check_now_action')) {
-        $result = indivisible_newsletter_process_emails();
-        if (is_wp_error($result)) {
-            $check_now_notice = '<div class="notice notice-error"><p>' . esc_html($result->get_error_message()) . '</p></div>';
-        } else {
-            $check_now_notice = '<div class="notice notice-success"><p>' . esc_html($result) . '</p></div>';
-        }
-    }
+    // Handle "Check Now" action (CON10 A2: .ids-alert with batch outcomes).
+    $check_now_notice = indivisible_newsletter_handle_check_now_action();
 
     // Handle "Test Connection" and "Diagnose" actions (CON10 D1: .ids-alert).
     $test_conn_notice = indivisible_newsletter_handle_test_connection_action();

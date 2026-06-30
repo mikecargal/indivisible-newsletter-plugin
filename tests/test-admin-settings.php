@@ -333,7 +333,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     unset( $_POST['in_check_now'], $_REQUEST['_wpnonce'] );
 
-    $this->assertHtml( $output )->find( 'div.notice-error' )->exists();
+    // CON10 A2: Check Now failures now use the canonical .ids-alert idiom.
+    $this->assertHtml( $output )->find( '.ids-alert.ids-alert-error' )->exists();
   }
 
   public function test_check_now_handler_dies_without_valid_nonce(): void {

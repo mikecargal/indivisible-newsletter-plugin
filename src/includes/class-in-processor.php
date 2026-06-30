@@ -12,7 +12,10 @@ if (!defined('ABSPATH')) {
 /**
  * Process all qualified emails: fetch, clean, create posts.
  *
- * @return string|WP_Error Result message or error.
+ * @return array{created:int,failures:string[],notify_failures:string[]}|WP_Error
+ *               A structured batch report, or a WP_Error when the IMAP fetch
+ *               itself fails. CON10 A2/A3 surface failures + notify_failures via
+ *               the Check Now .ids-alert banner instead of logging them only.
  */
 function indivisible_newsletter_process_emails() {
     $emails = indivisible_newsletter_fetch_emails();
@@ -22,18 +25,20 @@ function indivisible_newsletter_process_emails() {
         return $emails;
     }
 
-    if (empty($emails)) {
-        return 'No new newsletter emails found.';
-    }
-
-    $processed_ids = get_option(IN_PROCESSED_KEY, array());
-    $count         = 0;
+    $processed_ids   = get_option(IN_PROCESSED_KEY, array());
+    $count           = 0;
+    $failures        = array();
+    $notify_failures = array();
 
     foreach ($emails as $email) {
-        $result = indivisible_newsletter_create_post_from_email($email);
+        $result = indivisible_newsletter_create_post_from_email($email, $notify_failures);
 
         if (is_wp_error($result)) {
-            indivisible_newsletter_log('Newsletter Poster: Failed to create post for "' . $email['subject'] . '": ' . $result->get_error_message());
+            // CON10 A2: collect the per-email failure for the Check Now banner,
+            // not just the error log.
+            $failure    = sprintf('Failed to create post for "%s": %s', $email['subject'], $result->get_error_message());
+            $failures[] = $failure;
+            indivisible_newsletter_log('Newsletter Poster: ' . $failure);
             continue;
         }
 
@@ -48,9 +53,13 @@ function indivisible_newsletter_process_emails() {
     $processed_ids = array_slice($processed_ids, -500);
     update_option(IN_PROCESSED_KEY, $processed_ids);
 
-    $message = "Processed {$count} newsletter email(s).";
-    indivisible_newsletter_log('Newsletter Poster: ' . $message);
-    return $message;
+    indivisible_newsletter_log('Newsletter Poster: ' . sprintf('Processed %d newsletter email(s).', $count));
+
+    return array(
+        'created'         => $count,
+        'failures'        => $failures,
+        'notify_failures' => $notify_failures,
+    );
 }
 
 /**

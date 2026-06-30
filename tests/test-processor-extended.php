@@ -615,7 +615,9 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
 
     $result = indivisible_newsletter_process_emails();
 
-    $this->assertStringContainsString( '2', $result );
+    // CON10 A2: process_emails() now returns a structured batch report.
+    $this->assertSame( 2, $result['created'] );
+    $this->assertSame( array(), $result['failures'] );
 
     $stored = get_option( IN_PROCESSED_KEY, array() );
     $this->assertCount( 2, $stored );
@@ -641,7 +643,8 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
 
     $result = indivisible_newsletter_process_emails();
 
-    $this->assertStringContainsString( '5', $result );
+    // CON10 A2: structured batch report.
+    $this->assertSame( 5, $result['created'] );
 
     $stored = get_option( IN_PROCESSED_KEY, array() );
     $this->assertCount( 500, $stored );
