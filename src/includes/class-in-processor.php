@@ -65,10 +65,14 @@ function indivisible_newsletter_process_emails() {
 /**
  * Create a WordPress post from a newsletter email.
  *
- * @param array $email Email data with 'subject', 'html', 'date', 'message_id'.
+ * @param array    $email           Email data with 'subject', 'html', 'date', 'message_id'.
+ * @param string[] $notify_failures Accumulator (by reference): a webmaster
+ *                                  notification send failure is appended so the
+ *                                  caller can surface it instead of dropping it
+ *                                  (CON10 A3).
  * @return int|WP_Error Post ID or error.
  */
-function indivisible_newsletter_create_post_from_email($email) {
+function indivisible_newsletter_create_post_from_email($email, array &$notify_failures = array()) {
     $settings = indivisible_newsletter_get_settings();
 
     // Extract the original newsletter content (strips forwarding wrapper if present).
@@ -123,8 +127,11 @@ function indivisible_newsletter_create_post_from_email($email) {
         update_post_meta( $post_id, '_in_newsletter_raw_subject', $email['subject'] );
     }
 
-    // Send notification email.
-    indivisible_newsletter_notify_webmaster($post_id, $title, $settings);
+    // Send notification email; record a send failure so the caller (Check Now)
+    // can surface it instead of leaving it silent — M-NONE (CON10 A3).
+    if ( ! indivisible_newsletter_notify_webmaster($post_id, $title, $settings) ) {
+        $notify_failures[] = sprintf('Webmaster notification failed for "%s".', $title);
+    }
 
     return $post_id;
 }
@@ -304,11 +311,13 @@ function indivisible_newsletter_clean_subject($subject) {
  * @param int    $post_id  The created post ID.
  * @param string $title    The post title.
  * @param array  $settings Plugin settings.
+ * @return bool True when sent (or there is nothing to send); false when
+ *              wp_mail() reports a send failure (CON10 A3).
  */
-function indivisible_newsletter_notify_webmaster($post_id, $title, $settings) {
+function indivisible_newsletter_notify_webmaster($post_id, $title, $settings): bool {
     $to = $settings['webmaster_email'];
     if (empty($to)) {
-        return;
+        return true; // Nothing to send is not a failure.
     }
 
     $edit_link = get_edit_post_link($post_id, 'raw');
@@ -322,5 +331,5 @@ function indivisible_newsletter_notify_webmaster($post_id, $title, $settings) {
     $message .= "Edit: {$edit_link}\n";
     $message .= "View: {$view_link}\n";
 
-    wp_mail($to, $subject, $message);
+    return (bool) wp_mail($to, $subject, $message);
 }

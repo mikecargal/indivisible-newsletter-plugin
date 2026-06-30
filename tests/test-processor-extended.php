@@ -663,6 +663,32 @@ class Test_IN_Processor_Extended extends IN_Test_Case {
     $this->assertEquals( '<new-msg-5@example.com>', end( $stored ) );
   }
 
+  // --- process_emails aggregates notify failures (CON10 A3) ---
+
+  public function test_process_emails_aggregates_notify_failures() {
+    $settings = $this->make_imap_settings();
+    $settings['webmaster_email'] = 'admin@example.com';
+    update_option( IN_OPTION_KEY, $settings );
+
+    // Force wp_mail() to fail (overrides the setUp capture filter that returns true).
+    remove_filter( 'pre_wp_mail', array( $this, 'capture_email' ) );
+    add_filter( 'pre_wp_mail', '__return_false' );
+
+    $script = $this->build_imap_script_for_messages( 1 );
+    [ $client, $server ] = $this->make_socket_pair( $script );
+    $this->inject_socket( $client, $server );
+
+    $result = indivisible_newsletter_process_emails();
+
+    remove_filter( 'pre_wp_mail', '__return_false' );
+
+    $this->assertSame( 1, $result['created'], 'The post is still created even when notification fails.' );
+    $this->assertNotEmpty(
+      $result['notify_failures'],
+      'A failed webmaster wp_mail() must be aggregated for the Check Now banner, not dropped (M-NONE).'
+    );
+  }
+
   // --- extract_forwarded_content edge cases ---
 
   public function test_extract_forwarded_content_removes_cc_header() {

@@ -30,6 +30,7 @@
             <file>./tests/test-reprocess.php</file>
             <file>./tests/test-reprocess-feedback.php</file>
             <file>./tests/test-check-now-feedback.php</file>
+            <file>./tests/test-notify-webmaster-result.php</file>
         </testsuite>
     </testsuites>
     <php>
