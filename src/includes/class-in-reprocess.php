@@ -152,8 +152,7 @@ function indivisible_newsletter_render_recent_newsletters_section(
                             <form method="post" action="<?php echo esc_url( admin_url( 'options-general.php?page=indivisible-newsletter' ) ); ?>#in-recent-newsletters-anchor" style="display:inline">
                                 <?php wp_nonce_field( 'in_reprocess_action_' . $post->ID ); ?>
                                 <input type="hidden" name="in_reprocess_post_id" value="<?php echo esc_attr( $post->ID ); ?>">
-                                <button type="submit" name="in_reprocess" class="button button-small"
-                                        onclick="return confirm('Reprocessing will replace the current content with a fresh clean of the original email. Any manual edits will be moved to a post revision. Continue?');">
+                                <button type="submit" name="in_reprocess" class="button button-small">
                                     Reprocess
                                 </button>
                             </form>

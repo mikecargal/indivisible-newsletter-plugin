@@ -20,6 +20,7 @@
             <file>./tests/test-imap-parser.php</file>
             <file>./tests/test-admin-deps.php</file>
             <file>./tests/test-diagnose-error-alert.php</file>
+            <file>./tests/test-admin-enqueue-ids.php</file>
         </testsuite>
         <testsuite name="group2">
             <file>./tests/test-field-rendering.php</file>

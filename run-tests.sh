@@ -27,7 +27,11 @@ run_in_container() {
     fi
 }
 
-# PHP tests (parallel via paratest). No JS tests in this plugin.
+# PHP tests (parallel via paratest).
 echo "Running PHP tests..."
 run_in_container "${PARATEST_PROCS:-10}" \
     "vendor/bin/paratest --processes ${PARATEST_PROCS:-10} --parallel-suite --coverage-clover=.phpunit.cache/test-coverage.xml"
+
+# JS tests (CON10 B1 introduced the plugin's first JS — the Reprocess confirm modal).
+echo "Running JS tests..."
+run_in_container -1 "npx jest --no-cache --coverage"

@@ -32,6 +32,29 @@ function indivisible_newsletter_add_settings_page() {
 }
 
 /**
+ * Enqueue the settings-page admin assets (CON10 B1).
+ *
+ * The Reprocess confirm script depends on ids-confirm-modal so IDS.confirmModal
+ * is defined before it runs. The design-system .ids-alert CSS is already loaded
+ * site-wide in admin by indivisible-shared.
+ *
+ * @param string $hook_suffix The current admin page hook suffix.
+ */
+add_action('admin_enqueue_scripts', 'indivisible_newsletter_enqueue_admin_assets');
+function indivisible_newsletter_enqueue_admin_assets($hook_suffix) {
+    if ('settings_page_indivisible-newsletter' !== $hook_suffix) {
+        return;
+    }
+    wp_enqueue_script(
+        'in-reprocess',
+        IN_PLUGIN_URL . 'js/in-reprocess.js',
+        array('ids-confirm-modal'),
+        IN_VERSION,
+        true
+    );
+}
+
+/**
  * Register settings and fields.
  */
 add_action('admin_init', 'indivisible_newsletter_register_settings');
