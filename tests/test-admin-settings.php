@@ -365,7 +365,8 @@ class Test_IN_Admin_Settings extends WP_UnitTestCase {
 
     unset( $_POST['in_test_connection'], $_REQUEST['_wpnonce'] );
 
-    $this->assertHtml( $output )->find( 'div.notice-error' )->exists();
+    // CON10 D1: Test Connection failures now use the canonical .ids-alert idiom.
+    $this->assertHtml( $output )->find( '.ids-alert.ids-alert-error' )->exists();
   }
 
   public function test_diagnose_handler_renders_report_when_settings_missing(): void {

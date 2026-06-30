@@ -246,6 +246,53 @@ function indivisible_newsletter_field_category($args) {
 }
 
 /**
+ * Render a binary action outcome — a success string or a WP_Error — as a
+ * canonical CON6 .ids-alert banner. Shared by the Test Connection action.
+ *
+ * @param string|WP_Error $result Success message, or a WP_Error.
+ * @return string Escaped .ids-alert markup.
+ */
+function indivisible_newsletter_action_notice( $result ): string {
+    if ( is_wp_error( $result ) ) {
+        return ids_render_alert( 'error', $result->get_error_message(), array( 'role' => 'alert' ) );
+    }
+    return ids_render_alert( 'success', (string) $result, array( 'role' => 'status' ) );
+}
+
+/**
+ * Handle the Test Connection action.
+ *
+ * @return string A .ids-alert notice, or '' when the action was not submitted.
+ *                wp_die()s on a bad nonce (check_admin_referer, like its siblings).
+ */
+function indivisible_newsletter_handle_test_connection_action(): string {
+    if ( ! isset( $_POST['in_test_connection'] ) ) {
+        return '';
+    }
+    check_admin_referer( 'in_test_connection_action' );
+    return indivisible_newsletter_action_notice( indivisible_newsletter_test_connection() );
+}
+
+/**
+ * Handle the Diagnose action.
+ *
+ * @return array{report:string,notice:string} The report text for the <pre>
+ *               block, and a .ids-alert-error banner when diagnostics hit a
+ *               hard failure ('' otherwise). wp_die()s on a bad nonce.
+ */
+function indivisible_newsletter_handle_diagnose_action(): array {
+    if ( ! isset( $_POST['in_diagnose'] ) ) {
+        return array( 'report' => '', 'notice' => '' );
+    }
+    check_admin_referer( 'in_diagnose_action' );
+    $diag   = indivisible_newsletter_diagnose();
+    $notice = null === $diag['error']
+        ? ''
+        : ids_render_alert( 'error', $diag['error'], array( 'role' => 'alert' ) );
+    return array( 'report' => $diag['report'], 'notice' => $notice );
+}
+
+/**
  * Render the settings page.
  */
 function indivisible_newsletter_render_settings_page() {
@@ -253,31 +300,20 @@ function indivisible_newsletter_render_settings_page() {
         return;
     }
 
-    // Handle "Check Now" action.
+    // Handle "Check Now" action. (CON10 A2 migrates this to a .ids-alert banner.)
+    $check_now_notice = '';
     if (isset($_POST['in_check_now']) && check_admin_referer('in_check_now_action')) {
         $result = indivisible_newsletter_process_emails();
         if (is_wp_error($result)) {
-            echo '<div class="notice notice-error"><p>' . esc_html($result->get_error_message()) . '</p></div>';
+            $check_now_notice = '<div class="notice notice-error"><p>' . esc_html($result->get_error_message()) . '</p></div>';
         } else {
-            echo '<div class="notice notice-success"><p>' . esc_html($result) . '</p></div>';
+            $check_now_notice = '<div class="notice notice-success"><p>' . esc_html($result) . '</p></div>';
         }
     }
 
-    // Handle "Test Connection" action.
-    if (isset($_POST['in_test_connection']) && check_admin_referer('in_test_connection_action')) {
-        $result = indivisible_newsletter_test_connection();
-        if (is_wp_error($result)) {
-            echo '<div class="notice notice-error"><p>Connection failed: ' . esc_html($result->get_error_message()) . '</p></div>';
-        } else {
-            echo '<div class="notice notice-success"><p>' . esc_html($result) . '</p></div>';
-        }
-    }
-
-    // Handle "Diagnose" action.
-    $diagnose_output = '';
-    if (isset($_POST['in_diagnose']) && check_admin_referer('in_diagnose_action')) {
-        $diagnose_output = indivisible_newsletter_diagnose();
-    }
+    // Handle "Test Connection" and "Diagnose" actions (CON10 D1: .ids-alert).
+    $test_conn_notice = indivisible_newsletter_handle_test_connection_action();
+    $diagnose         = indivisible_newsletter_handle_diagnose_action();
 
     // Handle "Reprocess" action submissions (per-row buttons in the Recent Newsletters table).
     // Returns an array with 'post_id' (int|null) and 'notice' (string); the renderer below
@@ -287,6 +323,10 @@ function indivisible_newsletter_render_settings_page() {
     ?>
     <div class="wrap">
         <h1>Newsletter Poster Settings</h1>
+        <?php
+        echo $check_now_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above
+        echo $test_conn_notice; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in handler
+        ?>
         <form method="post" action="options.php">
             <?php
             settings_fields('indivisible_newsletter_group');
@@ -312,10 +352,13 @@ function indivisible_newsletter_render_settings_page() {
             </form>
         </div>
 
-        <?php if (!empty($diagnose_output)) : ?>
+        <?php
+        echo $diagnose['notice']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped in handler
+        ?>
+        <?php if ('' !== $diagnose['report']) : ?>
         <div style="margin-top: 15px;">
             <h3>Diagnostic Report</h3>
-            <pre style="background: #1d2327; color: #b4b9be; padding: 15px; overflow-x: auto; max-height: 600px; overflow-y: auto; font-size: 13px; line-height: 1.5;"><?php echo esc_html($diagnose_output); ?></pre>
+            <pre style="background: #1d2327; color: #b4b9be; padding: 15px; overflow-x: auto; max-height: 600px; overflow-y: auto; font-size: 13px; line-height: 1.5;"><?php echo esc_html($diagnose['report']); ?></pre>
         </div>
         <?php endif; ?>
 

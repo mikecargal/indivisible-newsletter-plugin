@@ -679,7 +679,10 @@ function indivisible_newsletter_diagnose_recent_msgs($conn, array $all_uids, arr
  *
  * @codeCoverageIgnore
  *
- * @return string Diagnostic report.
+ * @return array{report:string,error:?string} The full report text (for the
+ *               <pre> block) plus a hard-failure message, or null when the
+ *               diagnostics ran to completion. CON10 D1 surfaces `error` as a
+ *               canonical .ids-alert-error banner.
  */
 function indivisible_newsletter_diagnose() {
     $settings = indivisible_newsletter_get_settings();
@@ -699,7 +702,7 @@ function indivisible_newsletter_diagnose() {
 
     if (empty($settings['imap_host']) || empty($settings['email_username']) || empty($settings['email_password'])) {
         $report[] = 'ERROR: Missing required settings.';
-        return implode("\n", $report);
+        return array( 'report' => implode("\n", $report), 'error' => 'Missing required settings: IMAP host, username, and password are all required.' );
     }
 
     $password = indivisible_newsletter_decrypt($settings['email_password']);
@@ -710,7 +713,7 @@ function indivisible_newsletter_diagnose() {
     $conn = indivisible_newsletter_imap_connect($settings, $password);
     if (is_wp_error($conn)) {
         $report[] = 'Connection FAILED: ' . $conn->get_error_message();
-        return implode("\n", $report);
+        return array( 'report' => implode("\n", $report), 'error' => 'Connection failed: ' . $conn->get_error_message() );
     }
     $report[] = 'Connected and authenticated successfully.';
     $report[] = '';
@@ -720,7 +723,7 @@ function indivisible_newsletter_diagnose() {
     if (is_wp_error($select)) {
         $report[] = 'SELECT FAILED: ' . $select->get_error_message();
         fclose($conn);
-        return implode("\n", $report);
+        return array( 'report' => implode("\n", $report), 'error' => 'Mailbox SELECT failed: ' . $select->get_error_message() );
     }
     foreach ($select as $line) {
         $report[] = '  ' . trim($line);
@@ -765,7 +768,7 @@ function indivisible_newsletter_diagnose() {
     indivisible_newsletter_imap_command($conn, 'LOGOUT');
     fclose($conn);
 
-    return implode("\n", $report);
+    return array( 'report' => implode("\n", $report), 'error' => null );
 }
 
 /**

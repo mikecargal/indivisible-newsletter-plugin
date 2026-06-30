@@ -18,6 +18,8 @@
             <file>./tests/test-encryption.php</file>
             <file>./tests/test-imap-connection.php</file>
             <file>./tests/test-imap-parser.php</file>
+            <file>./tests/test-admin-deps.php</file>
+            <file>./tests/test-diagnose-error-alert.php</file>
         </testsuite>
         <testsuite name="group2">
             <file>./tests/test-field-rendering.php</file>
@@ -26,6 +28,7 @@
             <file>./tests/test-sanitization.php</file>
             <file>./tests/test-settings.php</file>
             <file>./tests/test-reprocess.php</file>
+            <file>./tests/test-reprocess-feedback.php</file>
         </testsuite>
     </testsuites>
     <php>
