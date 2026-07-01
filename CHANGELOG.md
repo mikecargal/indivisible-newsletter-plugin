@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.0 — 2026-07-01
+
+Canonical feedback migration (CON10).
+
+### Features
+- Settings-save reports each rejected/coerced value (invalid IMAP encryption, invalid post status, dropped qualified-sender emails, invalid webmaster email) instead of a blanket "Settings saved."
+- Reprocess replaces its native `confirm()` with `IDS.confirmModal` (danger); previously-silent failures (bad-nonce/post-id reprocess, Check Now batch partial failures, webmaster-notify send result) are now surfaced.
+- Feedback renders through the canonical `.ids-alert` family (settings-save uses WordPress's native dismissible settings notices — an operator-accepted mechanism for the admin settings page).
+
+### Internal
+- CON10 satisfy-guard aggregate suite (G1 no native modals, G2 no deprecated `.ids-notice`/`.ids-message`); the plugin's first JavaScript + jsdom harness.
+
+
 ## 1.1.9 — 2026-05-28
 
 
