@@ -5,10 +5,14 @@
   "description": "Indivisible Newsletter Poster - WordPress Plugin",
   "scripts": {
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "format": "prettier --write \"**/*.{js,css}\""
   },
   "devDependencies": {
+    "@wordpress/prettier-config": "^4.51.0",
     "jest": "^29.7.0",
-    "jest-environment-jsdom": "^29.7.0"
-  }
+    "jest-environment-jsdom": "^29.7.0",
+    "prettier": "npm:wp-prettier@^3.0.3"
+  },
+  "prettier": "@wordpress/prettier-config"
 }

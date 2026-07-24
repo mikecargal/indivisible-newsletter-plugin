@@ -62,7 +62,8 @@ describe( 'CON10 B1 — Reprocess confirm modal', () => {
 
 	test( 'ignores submits from non-Reprocess forms', () => {
 		const other = document.createElement( 'form' );
-		other.innerHTML = '<button type="submit" name="in_check_now">Check Now</button>';
+		other.innerHTML =
+			'<button type="submit" name="in_check_now">Check Now</button>';
 		document.body.appendChild( other );
 		other.submit = jest.fn();
 
@@ -74,7 +75,10 @@ describe( 'CON10 B1 — Reprocess confirm modal', () => {
 
 	test( 'does not reference the native confirm()', () => {
 		const src = require( 'fs' ).readFileSync(
-			require( 'path' ).resolve( __dirname, '../../src/js/in-reprocess.js' ),
+			require( 'path' ).resolve(
+				__dirname,
+				'../../src/js/in-reprocess.js'
+			),
 			'utf8'
 		);
 		expect( src ).not.toMatch( /\bconfirm\s*\(/ );
