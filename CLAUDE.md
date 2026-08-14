@@ -49,6 +49,10 @@ This copies your changes to the WordPress plugins directory where they can be te
 - Database: MySQL 8.0 via Docker
 - Table prefix: `wp_fx2b2f_`
 
+### Smoke-Test Login
+
+Browser smoke tests on the local dev site sign in as WordPress account `claude-smoke` (administrator) — use it instead of creating ad-hoc accounts. Password: `CLAUDE_SMOKE_PASSWORD` in `~/.env`. Recreated automatically by `../dev_wordpress_claude/post-restore.sh` after every production restore.
+
 ## Test-Driven Development (TDD) — MANDATORY
 
 All changes to this plugin MUST follow a test-first workflow.
