@@ -14,79 +14,12 @@ class Test_Plugin_Bootstrap extends IN_Test_Case {
 		$this->assertSame( $plugin_data['Version'], IN_VERSION );
 	}
 
-	public function test_frontend_css_hook_registered(): void {
-		$this->assertNotFalse(
+	public function test_frontend_css_is_not_hooked_to_wp_head(): void {
+		// CON21 (audit P4-2): the .in-newsletter-content rules moved verbatim to
+		// the theme's style.css. The plugin must not echo an inline <style>.
+		$this->assertFalse(
 			has_action( 'wp_head', 'indivisible_newsletter_frontend_css' ),
-			'Frontend CSS should be hooked to wp_head'
-		);
-	}
-
-	public function test_frontend_css_outputs_word_break_rule(): void {
-		ob_start();
-		indivisible_newsletter_frontend_css();
-		$output = ob_get_clean();
-
-		$this->assertStringContainsString( '.in-newsletter-content', $output );
-		$this->assertStringContainsString( 'break-word', $output );
-	}
-
-	public function test_frontend_css_outputs_wrapper_background_and_foreground(): void {
-		ob_start();
-		indivisible_newsletter_frontend_css();
-		$output = ob_get_clean();
-
-		$this->assertHtml( $output )->find( 'style' )->exists();
-
-		$this->assertMatchesRegularExpression(
-			'/\.in-newsletter-content\s*\{[^}]*background-color\s*:\s*#ffffff/i',
-			$output
-		);
-		$this->assertMatchesRegularExpression(
-			'/\.in-newsletter-content\s*\{[^}]*color\s*:\s*#000000/i',
-			$output
-		);
-	}
-
-	public function test_frontend_css_outputs_wrapper_centering(): void {
-		ob_start();
-		indivisible_newsletter_frontend_css();
-		$output = ob_get_clean();
-
-		$this->assertHtml( $output )->find( 'style' )->exists();
-
-		$this->assertMatchesRegularExpression(
-			'/\.in-newsletter-content\s*\{[^}]*max-width\s*:/i',
-			$output
-		);
-		$this->assertMatchesRegularExpression(
-			'/\.in-newsletter-content\s*\{[^}]*margin\s*:[^;}]*auto/i',
-			$output
-		);
-	}
-
-	public function test_frontend_css_forces_color_inheritance_on_descendants(): void {
-		ob_start();
-		indivisible_newsletter_frontend_css();
-		$output = ob_get_clean();
-
-		$this->assertHtml( $output )->find( 'style' )->exists();
-
-		$this->assertMatchesRegularExpression(
-			'/\.in-newsletter-content\s*\*\s*\{[^}]*color\s*:\s*inherit/i',
-			$output
-		);
-	}
-
-	public function test_frontend_css_overrides_nl_container_background(): void {
-		ob_start();
-		indivisible_newsletter_frontend_css();
-		$output = ob_get_clean();
-
-		$this->assertHtml( $output )->find( 'style' )->exists();
-
-		$this->assertMatchesRegularExpression(
-			'/\.in-newsletter-content\s+table\.nl-container\s*\{[^}]*background\s*:\s*transparent\s*!important/i',
-			$output
+			'Frontend CSS must not be hooked to wp_head; the theme serves it'
 		);
 	}
 

@@ -20,8 +20,8 @@ define('IN_CRON_HOOK', 'indivisible_newsletter_check_email');
 // Minimum Indivisible Shared Design System version. CON10 migrates the admin
 // feedback onto the CON6 .ids-alert family (ids_render_alert, .ids-alert CSS,
 // ids-confirm-modal), which landed in the shared 3.3.0 line (commit "CON6 Step
-// 20"); the -dev floor matches the in-rollout dev build and any future release.
-define('IN_REQUIRED_IDS_VERSION', '3.3.0-dev');
+// 20"). Minimums are plain X.Y.Z (audit P4-11).
+define('IN_REQUIRED_IDS_VERSION', '3.3.0');
 
 /**
  * Log a message to the PHP error log, suppressed during tests.
@@ -91,18 +91,6 @@ function indivisible_newsletter_design_system_notice() {
             $current
         );
     printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $message ) );
-}
-
-// Frontend CSS for newsletter posts.
-add_action( 'wp_head', 'indivisible_newsletter_frontend_css' );
-/**
- * Inject CSS for the newsletter content wrapper.
- *
- * Enforces a guaranteed-readable white card against the (potentially dark) page
- * theme. Also restores word-break behavior stripped by wp_kses_post.
- */
-function indivisible_newsletter_frontend_css() {
-    echo '<style>.in-newsletter-content{overflow-wrap:break-word;word-break:break-word;background-color:#ffffff;color:#000000;max-width:720px;margin:0 auto}.in-newsletter-content *{color:inherit}.in-newsletter-content table.nl-container{background:transparent !important}</style>' . "\n";
 }
 
 // Activation hook.

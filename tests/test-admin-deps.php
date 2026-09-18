@@ -26,6 +26,16 @@ class Test_Admin_Deps extends IN_Test_Case {
 		);
 	}
 
+	public function test_required_ids_version_is_a_plain_release_version(): void {
+		// Audit P4-11: minimums must be plain X.Y.Z (workspace CLAUDE.md). A
+		// -dev floor is permissive, not a real release floor.
+		$this->assertMatchesRegularExpression(
+			'/^\d+\.\d+\.\d+$/',
+			IN_REQUIRED_IDS_VERSION,
+			'IN_REQUIRED_IDS_VERSION must be a plain X.Y.Z release version, never a -dev suffix.'
+		);
+	}
+
 	public function test_live_design_system_satisfies_required_version(): void {
 		$this->assertTrue(
 			defined( 'IDS_VERSION' ),
