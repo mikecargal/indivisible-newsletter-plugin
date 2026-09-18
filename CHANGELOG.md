@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.1 — 2026-09-18
+
+### Internal
+- Drop the wp_head inline <style> for .in-newsletter-content; the theme (extendable-child >= 1.3.0, CON20) now serves those rules verbatim. Requires theme 1.3.0+ on the same site (audit P4-2, CON21).
+- Normalize IN_REQUIRED_IDS_VERSION to plain 3.3.0 and add a no-suffix guard test (audit P4-11).
+- Adopt prettier (WordPress config): tooling, mass reformat, and .git-blame-ignore-revs for the reformat commit.
+- Register the safari-mcp-stp MCP server in project-scope .mcp.json.
+- Document the claude-smoke smoke-test login in CLAUDE.md.
+
+
 ## 1.2.0 — 2026-07-01
 
 Canonical feedback migration (CON10).
