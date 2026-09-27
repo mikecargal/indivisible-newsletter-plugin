@@ -476,10 +476,11 @@ function indivisible_newsletter_render_settings_page() {
         // Passes the reprocess result so the renderer can place an inline admin
         // notice directly under the reprocessed post's row. Both the table HTML
         // and the inline notice are pre-escaped inside the helper.
+        // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside render function
         echo indivisible_newsletter_render_recent_newsletters_section(
             (int) ( $reprocess_result['post_id'] ?? 0 ),
             (string) ( $reprocess_result['notice'] ?? '' )
-        ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped inside render function
+        );
         ?>
 
         <hr />

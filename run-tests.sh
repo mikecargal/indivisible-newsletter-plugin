@@ -27,6 +27,10 @@ run_in_container() {
     fi
 }
 
+# PHPCS gate (shared script in the workspace; any phpcs error aborts under set -e).
+echo "Running PHPCS gate..."
+"$WORKSPACE_DIR/phpcs-gate.sh" "$PWD"
+
 # PHP tests (parallel via paratest).
 echo "Running PHP tests..."
 run_in_container "${PARATEST_PROCS:-10}" \
